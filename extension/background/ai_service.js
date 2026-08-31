@@ -88,20 +88,58 @@ async function fetchLiveGeminiModels(apiKey) {
 }
 
 /**
- * Validates connection with selected AI provider.
+ * Fetches dynamic models for supported providers (e.g. Gemini).
  */
-async function testConnection(provider, apiKey, model, customEndpoint) {
-  if (provider !== "ollama" && (!apiKey || apiKey.trim() === "")) {
+async function fetchDynamicModels(options) {
+  const provider = options?.provider === "google" ? "gemini" : (options?.provider || "gemini");
+  const apiKey = options?.apiKey || "";
+
+  if (provider === "gemini") {
+    return await fetchLiveGeminiModels(apiKey);
+  }
+
+  // Fallback to static list
+  const config = PROVIDER_CONFIGS[provider];
+  if (config) {
+    return {
+      success: true,
+      models: config.models.map((m) => ({ id: m, displayName: m })),
+    };
+  }
+  return { success: false, error: `Unknown provider: ${provider}` };
+}
+
+/**
+ * Validates connection with selected AI provider. Accepts either config object or arguments.
+ */
+async function testConnection(providerOrConfig, apiKey, model, customEndpoint) {
+  let provider, key, mdl, endpoint;
+
+  if (typeof providerOrConfig === "object" && providerOrConfig !== null) {
+    provider = providerOrConfig.provider;
+    key = providerOrConfig.apiKey;
+    mdl = providerOrConfig.model;
+    endpoint = providerOrConfig.endpoint || providerOrConfig.customEndpoint;
+  } else {
+    provider = providerOrConfig;
+    key = apiKey;
+    mdl = model;
+    endpoint = customEndpoint;
+  }
+
+  if (provider === "google") provider = "gemini";
+
+  if (provider !== "ollama" && (!key || key.trim() === "")) {
     return { success: false, error: "API Key is required." };
   }
 
   try {
     if (provider === "gemini") {
-      const cleanModel = (model || "gemini-3.7-flash").replace(/^models\//, "");
+      const cleanModel = (mdl || "gemini-2.0-flash").replace(/^models\//, "");
       
       // Try direct test with user's selected model first
       try {
-        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
+        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${key}`;
         const directRes = await fetch(directUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -123,7 +161,7 @@ async function testConnection(provider, apiKey, model, customEndpoint) {
       }
 
       // If direct call wasn't ok, query Live ListModels API to get active models for this key
-      const liveResult = await fetchLiveGeminiModels(apiKey);
+      const liveResult = await fetchLiveGeminiModels(key);
       if (!liveResult.success) {
         throw new Error(liveResult.error || "Failed to validate Gemini API key.");
       }
@@ -153,13 +191,13 @@ async function testConnection(provider, apiKey, model, customEndpoint) {
     }
 
     if (provider === "groq" || provider === "openai" || provider === "deepseek") {
-      const selectedModel = model || PROVIDER_CONFIGS[provider].defaultModel;
-      const baseUrl = customEndpoint || PROVIDER_CONFIGS[provider].baseUrl;
+      const selectedModel = mdl || PROVIDER_CONFIGS[provider].defaultModel;
+      const baseUrl = endpoint || PROVIDER_CONFIGS[provider].baseUrl;
       const res = await fetch(baseUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${key}`,
         },
         body: JSON.stringify({
           model: selectedModel,
@@ -176,8 +214,8 @@ async function testConnection(provider, apiKey, model, customEndpoint) {
     }
 
     if (provider === "ollama") {
-      const selectedModel = model || PROVIDER_CONFIGS.ollama.defaultModel;
-      const baseUrl = customEndpoint || PROVIDER_CONFIGS.ollama.baseUrl;
+      const selectedModel = mdl || PROVIDER_CONFIGS.ollama.defaultModel;
+      const baseUrl = endpoint || PROVIDER_CONFIGS.ollama.baseUrl;
       const res = await fetch(baseUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -202,8 +240,29 @@ async function testConnection(provider, apiKey, model, customEndpoint) {
 
 /**
  * Universal text generation returning parsed JSON.
+ * Accepts either (settingsObject, systemPrompt, userPrompt) OR (provider, apiKey, model, systemPrompt, userPrompt, customEndpoint).
  */
-async function generateAIResponse(provider, apiKey, model, systemPrompt, userPrompt, customEndpoint) {
+async function generateAIResponse(providerOrSettings, apiKeyOrSysPrompt, modelOrUserPrompt, systemPrompt, userPrompt, customEndpoint) {
+  let provider, apiKey, model, sysPrompt, usrPrompt, endpoint;
+
+  if (typeof providerOrSettings === "object" && providerOrSettings !== null) {
+    provider = providerOrSettings.provider;
+    apiKey = providerOrSettings.apiKey;
+    model = providerOrSettings.model;
+    endpoint = providerOrSettings.endpoint;
+    sysPrompt = apiKeyOrSysPrompt;
+    usrPrompt = modelOrUserPrompt;
+  } else {
+    provider = providerOrSettings;
+    apiKey = apiKeyOrSysPrompt;
+    model = modelOrUserPrompt;
+    sysPrompt = systemPrompt;
+    usrPrompt = userPrompt;
+    endpoint = customEndpoint;
+  }
+
+  if (provider === "google") provider = "gemini";
+
   if (provider === "gemini") {
     const cleanModel = (model || "gemini-2.0-flash").replace(/^models\//, "");
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
@@ -211,8 +270,8 @@ async function generateAIResponse(provider, apiKey, model, systemPrompt, userPro
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: [{ text: userPrompt }] }],
+        systemInstruction: { parts: [{ text: sysPrompt }] },
+        contents: [{ parts: [{ text: usrPrompt }] }],
         generationConfig: {
           responseMimeType: "application/json",
           temperature: 0.7,
@@ -232,7 +291,7 @@ async function generateAIResponse(provider, apiKey, model, systemPrompt, userPro
 
   if (provider === "groq" || provider === "openai" || provider === "deepseek") {
     const selectedModel = model || PROVIDER_CONFIGS[provider].defaultModel;
-    const baseUrl = customEndpoint || PROVIDER_CONFIGS[provider].baseUrl;
+    const baseUrl = endpoint || PROVIDER_CONFIGS[provider].baseUrl;
     const res = await fetch(baseUrl, {
       method: "POST",
       headers: {
@@ -242,8 +301,8 @@ async function generateAIResponse(provider, apiKey, model, systemPrompt, userPro
       body: JSON.stringify({
         model: selectedModel,
         messages: [
-          { role: "system", content: `${systemPrompt}\nYou MUST return a valid JSON object matching the requested schema.` },
-          { role: "user", content: userPrompt },
+          { role: "system", content: `${sysPrompt}\nYou MUST return a valid JSON object matching the requested schema.` },
+          { role: "user", content: usrPrompt },
         ],
         response_format: { type: "json_object" },
         temperature: 0.7,
@@ -262,14 +321,14 @@ async function generateAIResponse(provider, apiKey, model, systemPrompt, userPro
 
   if (provider === "ollama") {
     const selectedModel = model || PROVIDER_CONFIGS.ollama.defaultModel;
-    const baseUrl = customEndpoint || PROVIDER_CONFIGS.ollama.baseUrl;
+    const baseUrl = endpoint || PROVIDER_CONFIGS.ollama.baseUrl;
     const res = await fetch(baseUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: selectedModel,
-        system: systemPrompt,
-        prompt: userPrompt,
+        system: sysPrompt,
+        prompt: usrPrompt,
         format: "json",
         stream: false,
       }),
@@ -291,6 +350,7 @@ if (typeof self !== "undefined") {
   self.AI_SERVICE = {
     PROVIDER_CONFIGS,
     fetchLiveGeminiModels,
+    fetchDynamicModels,
     testConnection,
     generateAIResponse,
   };
