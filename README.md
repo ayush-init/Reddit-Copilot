@@ -1,16 +1,34 @@
 # Reddit Copilot
 
-Reddit Copilot is an AI-powered assistant for Reddit. It connects to a user's Reddit account, understands their account activity and community context, analyzes posts, comments, and direct messages, recommends actions, and lets users perform supported Reddit actions directly from the platform.
+Reddit Copilot is an AI-powered assistant for Reddit. It connects to a user's Reddit account, understands account activity and community context, analyzes posts, comments, and direct messages, recommends actions, and lets users perform supported Reddit actions directly from the platform.
 
 ---
 
-## Current Status: Phase 0 (Foundation)
+## Current Status: Phase 1 (Reddit OAuth)
 
-This repository currently contains **Phase 0: Foundation**.
-The goal of Phase 0 is to establish a clean, minimal project structure with:
-- A modular FastAPI backend exposing health-check and CORS endpoints
-- PostgreSQL-ready environment configuration
-- A Next.js frontend with Tailwind CSS and live backend connectivity verification
+- **Phase 0 (Foundation)**: ✅ Complete
+- **Phase 1 (Reddit OAuth)**: ✅ Complete
+- **Phase 2 (Account Data Sync)**: 🔄 Next Up
+
+---
+
+## Features in Phase 1
+
+1. **Reddit OAuth 2.0 Integration**:
+   - Secure authorization URL generation with anti-CSRF `state`.
+   - Token exchange (permanent access token & refresh token).
+   - Fetching user profile identity (`u/username`, karma counters, avatar, account age).
+2. **Database Account Storage**:
+   - SQLAlchemy ORM model storing connected Reddit accounts.
+   - Defaults to local SQLite (`reddit_copilot.db`) or connects to PostgreSQL via `DATABASE_URL`.
+3. **Session & Security**:
+   - Secure HTTP-only JWT session cookie.
+   - `GET /api/auth/me` to check current authentication state.
+   - `POST /api/auth/logout` to disconnect account.
+4. **Interactive Frontend Dashboard**:
+   - "Connect Reddit" button linking to backend OAuth.
+   - Authenticated User Profile card displaying avatar, username, total karma, post karma, comment karma, and account age.
+   - Live system health status indicator.
 
 ---
 
@@ -22,26 +40,35 @@ reddit-copilot/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── __init__.py
-│   │   │   └── health.py        # GET /api/health endpoint
+│   │   │   ├── auth.py          # Reddit OAuth login, callback, /me, logout
+│   │   │   └── health.py        # GET /api/health
 │   │   ├── core/
 │   │   │   ├── __init__.py
-│   │   │   └── config.py        # Settings & DB configuration
+│   │   │   └── config.py        # Settings & environment variables
+│   │   ├── db/
+│   │   │   ├── __init__.py
+│   │   │   ├── models.py        # RedditAccount SQLAlchemy model
+│   │   │   └── session.py       # DB engine & session
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   └── reddit_oauth.py  # Reddit OAuth token & profile helpers
 │   │   ├── __init__.py
-│   │   └── main.py              # FastAPI application entry point
-│   └── requirements.txt         # Python dependencies
+│   │   └── main.py              # FastAPI app entry point
+│   └── requirements.txt
 ├── frontend/
 │   ├── app/
 │   │   ├── components/
-│   │   │   └── HealthStatus.tsx # Live backend connectivity monitor
+│   │   │   ├── HealthStatus.tsx # Backend connectivity indicator
+│   │   │   └── UserProfile.tsx  # Connected Reddit user card
 │   │   ├── globals.css
 │   │   ├── layout.tsx
-│   │   └── page.tsx             # Landing page UI
+│   │   └── page.tsx             # Main dashboard UI
 │   ├── package.json
 │   ├── postcss.config.mjs
 │   ├── tailwind.config.ts
 │   └── tsconfig.json
-├── .env.example                 # Example environment variables
-├── .gitignore                   # Git ignore file
+├── .env.example
+├── .gitignore
 └── README.md
 ```
 
@@ -49,96 +76,61 @@ reddit-copilot/
 
 ## Getting Started
 
-### Prerequisites
-- **Python 3.10+** (Python 3.12 recommended)
-- **Node.js 18+** & **npm**
+### 1. Reddit App Setup (One-Time)
+To test with your actual Reddit account:
+1. Go to [https://www.reddit.com/prefs/apps](https://www.reddit.com/prefs/apps)
+2. Scroll to the bottom and click **"create another app..."** (or "create app").
+3. Fill in:
+   - **Name**: `Reddit Copilot Dev`
+   - **App type**: Select **web app**
+   - **Redirect uri**: `http://localhost:8000/api/auth/reddit/callback`
+4. Click **"create app"**.
+5. Copy your **Client ID** (the string right under the app name) and **Client Secret**.
 
 ---
 
-### 1. Running the Backend (FastAPI)
+### 2. Configure Backend Environment
 
-1. Open a terminal and navigate to the `backend/` directory:
-   ```bash
-   cd backend
-   ```
-
-2. Create and activate a Python virtual environment:
-   - **Windows (PowerShell):**
-     ```powershell
-     python -m venv .venv
-     .\.venv\Scripts\Activate.ps1
-     ```
-   - **macOS / Linux:**
-     ```bash
-     python3 -m venv .venv
-     source .venv/bin/activate
-     ```
-
-3. Install required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Start the FastAPI development server:
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-
-5. Verify the backend is running:
-   - API Root: [http://localhost:8000/](http://localhost:8000/)
-   - Health Endpoint: [http://localhost:8000/api/health](http://localhost:8000/api/health)
-   - Interactive Docs (Swagger): [http://localhost:8000/docs](http://localhost:8000/docs)
-
----
-
-### 2. Running the Frontend (Next.js)
-
-1. Open a separate terminal and navigate to the `frontend/` directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install Node.js dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the Next.js development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## Verifying Frontend-Backend Connection
-
-1. Ensure the backend server is running on port `8000`.
-2. Open the frontend at `http://localhost:3000`.
-3. Look at the **System Status** card on the landing page:
-   - You should see **Backend API: Connected** with a green badge.
-   - The JSON payload `{ "status": "ok", "message": "Reddit Copilot backend is running" }` will be rendered.
-   - If the backend is stopped, the status will show **Disconnected** with error details and a retry button.
-
----
-
-## Environment Variables
-
-Copy `.env.example` if you need custom overrides:
+In the `backend/` directory (or root), create a `.env` file (or copy `.env.example`):
 
 ```bash
-cp .env.example .env
+cp .env.example backend/.env
 ```
 
-Available variables:
-- `DATABASE_URL`: PostgreSQL connection string (prepared for future phases)
-- `BACKEND_CORS_ORIGINS`: JSON array or comma-separated list of allowed frontend origins
-- `NEXT_PUBLIC_BACKEND_URL`: URL of the FastAPI backend for the Next.js frontend
+Edit `backend/.env` with your Reddit credentials:
+```env
+REDDIT_CLIENT_ID=your_client_id_here
+REDDIT_CLIENT_SECRET=your_client_secret_here
+REDDIT_REDIRECT_URI=http://localhost:8000/api/auth/reddit/callback
+REDDIT_USER_AGENT=web:reddit-copilot:v0.1.0 (by /u/your_reddit_username)
+```
 
 ---
 
-## Next Phase
+### 3. Run Backend (Terminal 1)
 
-**Phase 1: Reddit OAuth Integration**
-Phase 1 will add Reddit OAuth authentication, allowing users to securely connect their Reddit accounts and manage authorization tokens.
+```powershell
+cd "e:\Reddit Copilot\backend"
+.\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --port 8000
+```
+
+---
+
+### 4. Run Frontend (Terminal 2)
+
+```powershell
+cd "e:\Reddit Copilot\frontend"
+npm run dev
+```
+
+---
+
+### 5. Test the Flow
+
+1. Open [http://localhost:3000](http://localhost:3000) in your browser.
+2. Click **"Connect Reddit"**.
+3. You will be redirected to Reddit to authorize permissions (`identity`, `read`, `history`, `mysubreddits`, etc.).
+4. After clicking **"Allow"**, Reddit redirects back through the backend callback to the frontend.
+5. You will see your **Reddit Profile Card** with your username, total karma, post karma, comment karma, and account age.
+6. Click **"Disconnect"** to test logging out.

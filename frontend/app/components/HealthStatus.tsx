@@ -23,6 +23,7 @@ export default function HealthStatus() {
     try {
       const res = await fetch(`${backendUrl}/api/health`, {
         method: "GET",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
