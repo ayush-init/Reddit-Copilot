@@ -1,7 +1,7 @@
 /**
- * Reddit AI Copilot - Resilient Semantic Context Extractor
- * Purely user-triggered: Extracts visible DOM data only when user initiates an AI action.
- * Zero background scraping, zero periodic polling.
+ * Reddit AI Copilot - Resilient Semantic Context Extractor & Account Intelligence
+ * Extracts visible DOM data, active submit draft, and logged-in account metadata.
+ * Purely user-triggered & zero background scraping.
  */
 
 const ContextExtractor = {
@@ -28,25 +28,106 @@ const ContextExtractor = {
   },
 
   /**
+   * Automatically extracts the logged-in Reddit user's profile metadata.
+   * (Username, Karma, Account tier - without asking the user!)
+   */
+  extractUserProfile() {
+    let username = "";
+    let karma = "";
+    let accountTier = "growing"; // default fallback
+
+    // 1. Search for username in user-drawer, profile links, avatar buttons
+    const userSelectors = [
+      "shreddit-user-drawer span[data-testid='user-name']",
+      "button[aria-label*='user menu' i] span",
+      "button[aria-label*='User Avatar' i] span",
+      "a[href^='/user/']",
+      "faceplate-dropdown-menu[aria-label*='User' i] span",
+      "#user-dropdown span",
+    ];
+
+    for (const sel of userSelectors) {
+      const el = document.querySelector(sel);
+      if (el && el.textContent.trim()) {
+        const text = el.textContent.trim();
+        if (text.startsWith("u/") || text.includes("u/")) {
+          username = text;
+          break;
+        } else if (text.length > 2 && !text.includes("Reddit") && !text.includes("Create") && !text.includes("Log")) {
+          username = `u/${text.replace(/^@/, "")}`;
+          break;
+        }
+      }
+    }
+
+    // Fallback: search window config if available
+    if (!username && window.___r && window.___r.user) {
+      username = `u/${window.___r.user.name || ""}`;
+    }
+
+    // 2. Search for karma count in user drawer or header
+    const karmaSelectors = [
+      "span[data-testid='karma-count']",
+      "shreddit-user-drawer [data-testid='karma']",
+      "span[id*='karma']",
+      "div:has(> span:contains('karma'))",
+    ];
+
+    for (const sel of karmaSelectors) {
+      try {
+        const el = document.querySelector(sel);
+        if (el && el.textContent) {
+          const match = el.textContent.match(/([\d,]+(\.\d+)?\s*[kKmM]?)\s*karma/i);
+          if (match) {
+            karma = match[1];
+            break;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Determine heuristic karma tier based on extracted karma
+    if (karma) {
+      const num = parseInt(karma.replace(/,/g, ""), 10);
+      if (num < 50) accountTier = "new";
+      else if (num < 500) accountTier = "growing";
+      else accountTier = "established";
+    }
+
+    return {
+      username: username || "Authenticated Redditor",
+      karma: karma || "Active Karma",
+      accountTier,
+    };
+  },
+
+  /**
    * Extracts the subreddit name from URL, DOM, or submit page dropdown.
    */
   extractSubredditName() {
-    // 1. URL-based extraction (most reliable)
+    // 1. Submit Page Community Selector Dropdown (checks user selection first)
+    const submitDropdowns = [
+      "faceplate-dropdown-menu button span",
+      "button[aria-label*='community' i]",
+      "div[data-testid='community-dropdown']",
+      "shreddit-community-picker button",
+      "button:has(span[data-testid='subreddit-name'])",
+    ];
+
+    for (const sel of submitDropdowns) {
+      const el = document.querySelector(sel);
+      if (el && el.textContent) {
+        const text = el.textContent.trim();
+        const match = text.match(/r\/([a-zA-Z0-9_]+)/i);
+        if (match) return `r/${match[1]}`;
+        if (text.startsWith("r/")) return text;
+      }
+    }
+
+    // 2. URL-based extraction
     const match = window.location.pathname.match(/\/r\/([a-zA-Z0-9_]+)/i);
     if (match && match[1]) {
       return `r/${match[1]}`;
-    }
-
-    // 2. Submit Page Community Selector Dropdown
-    const submitCommunityEl =
-      document.querySelector("faceplate-dropdown-menu button span") ||
-      document.querySelector("button[aria-label*='community' i]") ||
-      document.querySelector("div[data-testid='community-dropdown']");
-    if (submitCommunityEl && submitCommunityEl.textContent) {
-      const text = submitCommunityEl.textContent.trim();
-      const cleanMatch = text.match(/r\/([a-zA-Z0-9_]+)/i);
-      if (cleanMatch) return `r/${cleanMatch[1]}`;
-      if (text.startsWith("r/")) return text;
     }
 
     // 3. DOM fallback on feed/post
@@ -72,7 +153,8 @@ const ContextExtractor = {
     if (this.detectPageView() === "submit_post") {
       const titleInput = this.findPostTitleInput();
       if (titleInput) {
-        return (titleInput.value || titleInput.innerText || "").trim();
+        const val = titleInput.value || titleInput.innerText || "";
+        if (val.trim()) return val.trim();
       }
     }
 
@@ -92,14 +174,9 @@ const ContextExtractor = {
       }
     }
 
-    // Document title fallback
     const docTitle = document.title || "";
-    if (docTitle.includes(" : ")) {
-      return docTitle.split(" : ")[0].trim();
-    }
-    if (docTitle.includes(" - Reddit")) {
-      return docTitle.split(" - Reddit")[0].trim();
-    }
+    if (docTitle.includes(" : ")) return docTitle.split(" : ")[0].trim();
+    if (docTitle.includes(" - Reddit")) return docTitle.split(" - Reddit")[0].trim();
 
     return docTitle.trim();
   },
@@ -112,7 +189,8 @@ const ContextExtractor = {
     if (this.detectPageView() === "submit_post") {
       const bodyInput = this.findPostBodyInput();
       if (bodyInput) {
-        return (bodyInput.innerText || bodyInput.value || "").trim();
+        const val = bodyInput.innerText || bodyInput.value || "";
+        if (val.trim()) return val.trim();
       }
     }
 
@@ -141,7 +219,6 @@ const ContextExtractor = {
   extractCommunityRules() {
     const rules = [];
 
-    // Modern Reddit shreddit rules / sidebar widgets
     const ruleElements = document.querySelectorAll(
       "shreddit-rule, [data-testid='rule-item'], div[data-testid='community-rules'] li, div[aria-label='Rules'] li, div[data-testid='posting-rules'] li"
     );
@@ -155,7 +232,6 @@ const ContextExtractor = {
       });
     }
 
-    // Sidebar text fallback
     if (rules.length === 0) {
       const sidebar = document.querySelector("aside, [data-testid='subreddit-sidebar'], #sidebar, div[slot='sidebar']");
       if (sidebar) {
@@ -183,13 +259,14 @@ const ContextExtractor = {
    */
   findPostTitleInput() {
     const selectors = [
+      "faceplate-textarea-input[name='title'] textarea",
+      "faceplate-textarea-input textarea",
       "textarea[name='title']",
       "textarea[placeholder*='Title']",
-      "faceplate-textarea-input textarea",
-      "input[name='title']",
-      "input[placeholder*='Title']",
       "textarea[aria-label*='Title' i]",
       "div[data-testid='post-title-text-area'] textarea",
+      "input[name='title']",
+      "input[placeholder*='Title']",
     ];
 
     for (const selector of selectors) {
@@ -204,13 +281,15 @@ const ContextExtractor = {
    */
   findPostBodyInput() {
     const selectors = [
-      "div[data-testid='post-composer'] div[contenteditable='true']",
       "shreddit-composer div[contenteditable='true']",
+      "div[data-testid='post-composer'] div[contenteditable='true']",
       "div[role='textbox'][contenteditable='true']",
       "div[data-lexical-editor='true']",
+      "shreddit-composer textarea",
       "textarea[name='text']",
       "textarea[placeholder*='Body text']",
       "textarea[placeholder*='Text']",
+      "textarea[placeholder*='What are your thoughts?']",
     ];
 
     for (const selector of selectors) {
@@ -254,12 +333,14 @@ const ContextExtractor = {
     const title = this.extractPostTitle();
     const body = this.extractPostBody();
     const rules = this.extractCommunityRules();
+    const userProfile = this.extractUserProfile();
 
     return {
       timestamp: new Date().toISOString(),
       url: window.location.href,
       pageView,
       subreddit,
+      userProfile,
       post: {
         title,
         body,
@@ -269,7 +350,7 @@ const ContextExtractor = {
   },
 };
 
-// Expose globally for content script
+// Expose globally
 if (typeof window !== "undefined") {
   window.ContextExtractor = ContextExtractor;
 }

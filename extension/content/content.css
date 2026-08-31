@@ -123,12 +123,19 @@
   line-height: 1.2 !important;
 }
 
-.rc-drawer-subreddit {
-  font-size: 12px !important;
-  color: #ff8c66 !important;
-  font-weight: 600 !important;
+.rc-user-account-badge {
+  font-size: 11px !important;
+  color: #d7dadc !important;
   display: block !important;
   margin-top: 2px !important;
+}
+
+.rc-user-account-badge span {
+  background-color: #272729 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  border: 1px solid #343536 !important;
+  display: inline-block !important;
 }
 
 .rc-close-btn {
@@ -177,6 +184,81 @@
   color: #ff4500 !important;
   border-bottom: 2px solid #ff4500 !important;
   background-color: rgba(255, 69, 0, 0.05) !important;
+}
+
+/* Live Reddit Sync Card */
+.rc-live-sync-card {
+  background-color: #1a1a1b !important;
+  border: 1px solid #272729 !important;
+  border-left: 3px solid #ff4500 !important;
+  border-radius: 6px !important;
+  padding: 8px 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  width: 100% !important;
+}
+
+.rc-sync-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.rc-sync-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #ff4500 !important;
+}
+
+.rc-sync-sub {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #ff8c66 !important;
+  background-color: #272729 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+.rc-sync-detail {
+  font-size: 11px !important;
+  color: #818384 !important;
+  line-height: 1.3 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Unified Box & Primary Button */
+.rc-unified-box {
+  background-color: #1a1a1b !important;
+  border: 1px solid #272729 !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+.rc-primary-generate-btn {
+  all: unset !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  background-color: #ff4500 !important;
+  color: #ffffff !important;
+  border-radius: 6px !important;
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.rc-primary-generate-btn:hover {
+  background-color: #e03d00 !important;
+  transform: translateY(-1px) !important;
 }
 
 /* 3. Drawer Body */

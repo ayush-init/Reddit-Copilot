@@ -160,15 +160,15 @@ reddit-copilot/
   - **Interactive Global Refine Box**: Input custom instructions (*"Make it shorter"*, *"Add Python tips"*) with instant AI apply.
   - **Card-Level Single Reply Refinement**: 🔄 *Refine* button on each generated reply card with inline AI prompt and single-card update.
 
-### ✅ Phase 5: Create Post Assistant, Karma-Aware Community Matcher & 1-Click Rule Upgrader — `[COMPLETED]`
+### ✅ Phase 5: Unified Post Creator, Automatic Account Intelligence & Anti-Deletion Preflight — `[COMPLETED]`
 - **Status**: Completed & Verified.
 - **Accomplishments**:
-  - **Submit Page Adaptive Mode (`reddit.com/submit`)**: Automatically toggles to "Create & Matcher" mode on post creation screens.
-  - **Account Karma & Age Filter (`Anti-AutoBan`)**: Solves the major ChatGPT flaw where new accounts get recommended giant subreddits and get instantly shadowbanned/auto-removed. Ranks subreddits into `🟢 Low-Karma Friendly`, `🎯 Target Niche`, and `🚀 High-Reach`.
-  - **Post Generator (Titles + Body + Flairs)**: Generates 3 hook variations and formatted markdown post body.
-  - **1-Click Post Inserters**: `Insert Title`, `Insert Post Body`, and `🚀 Insert Full Post into Reddit` buttons.
-  - **1-Click Rule Compliance Upgrader**: Scans post draft against subreddit rules, flags moderation concerns, and provides 1-click **"✨ Apply Upgraded Compliant Post into Reddit"**.
-  - **Personalized Post Ideas Strategist**: Suggests 3 tailor-made post concepts matching the user's saved persona.
+  - **Automatic Account Intelligence (`extractUserProfile`)**: Automatically extracts logged-in Reddit username (`u/...`), karma count, and account age directly from Reddit DOM — zero manual questions asked!
+  - **Unified Post Generator & Safe Community Matcher (All-in-One)**: Single generation gives 3 Title Hooks, Formatted Post Body, and 3 Verified Safe Subreddits (cross-referenced against actual user karma & community posting rules).
+  - **Live Reddit Sync Card**: Real-time display of active subreddit, live detected title, and character count right inside the drawer.
+  - **Anti-Deletion Health Review**: Analyzes draft against Reddit auto-mod filters, low-effort flags, self-promotion triggers, and provides a 1-click **"Insert Deletion-Proof Post into Reddit"** button.
+  - **Community Rule Verifier & 1-Click Fix**: Detailed rule checklist (Pass 🟢 / Fail 🔴) with 1-click **"Insert 100% Compliant Post into Reddit"**.
+  - **Fixed Native DOM Inserters**: Robust native property setters for `textarea[name="title"]`, `faceplate-textarea-input`, and `shreddit-composer` to reliably write into Reddit's submit fields.
 
 ---
 

@@ -1,8 +1,7 @@
 /**
- * Reddit AI Copilot - UI Injector
+ * Reddit AI Copilot - UI Injector (Unified Post Creator & Account Intelligence)
  * Creates floating badge, collapsible side drawer with Tone & Length Controls,
- * Post Creator & Karma-Aware Community Matcher, Rule Compliance Upgrader,
- * and Smart Text Inserters.
+ * Unified Post Creator, Anti-Deletion Health Review, and Native DOM Inserters.
  */
 
 const UIInjector = {
@@ -12,7 +11,6 @@ const UIInjector = {
   observerTimeout: null,
   selectedTone: "helpful",
   selectedLength: "standard",
-  selectedKarmaTier: "new",
   currentMode: "reply", // "reply" or "create"
 
   /**
@@ -42,6 +40,7 @@ const UIInjector = {
       if (this.observerTimeout) clearTimeout(this.observerTimeout);
       this.observerTimeout = setTimeout(() => {
         this.injectInlineCommentButtons();
+        this.updateLiveSyncState();
       }, 800);
     });
 
@@ -88,7 +87,9 @@ const UIInjector = {
           <span class="rc-drawer-logo">r/</span>
           <div>
             <h2 class="rc-drawer-title">Reddit Copilot</h2>
-            <span class="rc-drawer-subreddit" id="rc-current-subreddit">r/...</span>
+            <div class="rc-user-account-badge" id="rc-user-account-badge">
+              <span>👤 Auto-Detecting Profile...</span>
+            </div>
           </div>
         </div>
         <button type="button" class="rc-close-btn" id="rc-close-drawer" title="Close Panel">&times;</button>
@@ -97,15 +98,15 @@ const UIInjector = {
       <!-- Mode Switcher Tabs -->
       <div class="rc-mode-tabs">
         <button type="button" class="rc-mode-tab ${this.currentMode === 'reply' ? 'active' : ''}" id="rc-tab-reply">💬 Reply Assistant</button>
-        <button type="button" class="rc-mode-tab ${this.currentMode === 'create' ? 'active' : ''}" id="rc-tab-create">✍️ Create & Matcher</button>
+        <button type="button" class="rc-mode-tab ${this.currentMode === 'create' ? 'active' : ''}" id="rc-tab-create">✍️ Post Creator & Rules</button>
       </div>
 
       <div class="rc-drawer-body">
         <!-- Persona Quick Status Banner -->
         <div class="rc-persona-banner" id="rc-persona-banner">
           <div class="rc-persona-header">
-            <span class="rc-persona-label">👤 My Active Persona</span>
-            <button type="button" class="rc-persona-edit-toggle" id="rc-persona-toggle">Edit Persona</button>
+            <span class="rc-persona-label">👤 My Persona & Background</span>
+            <button type="button" class="rc-persona-edit-toggle" id="rc-persona-toggle">Edit</button>
           </div>
           <div class="rc-persona-text" id="rc-persona-preview">Personalized to your background & domain expertise.</div>
           <div class="rc-persona-edit-box hidden" id="rc-persona-edit-box">
@@ -149,12 +150,12 @@ const UIInjector = {
               <div class="rc-action-icon">🛡️</div>
               <div class="rc-action-info">
                 <span class="rc-action-label">Preflight Check Draft</span>
-                <span class="rc-action-sub">Check your draft against rules</span>
+                <span class="rc-action-sub">Check comment draft against rules</span>
               </div>
             </button>
           </div>
 
-          <!-- Phase 4: Tone & Length Customizer Bar -->
+          <!-- Tone & Length Customizer Bar -->
           <div class="rc-customizer-panel">
             <div class="rc-customizer-row">
               <span class="rc-customizer-label">Tone:</span>
@@ -183,64 +184,53 @@ const UIInjector = {
           </div>
         </div>
 
-        <!-- 2. POST CREATOR & KARMA MATCHER MODE CONTAINER (Phase 5) -->
+        <!-- 2. UNIFIED POST CREATOR & PREFLIGHT MODE CONTAINER -->
         <div id="rc-mode-create-view" class="${this.currentMode === 'create' ? '' : 'hidden'}">
-          <div class="rc-section-header">
-            <span class="rc-section-title">Account Karma Level (Anti-AutoBan)</span>
+          <!-- Live Reddit Detection Card -->
+          <div class="rc-live-sync-card" id="rc-live-sync-card">
+            <div class="rc-sync-header">
+              <span class="rc-sync-title">🔴 Live Reddit Sync:</span>
+              <span class="rc-sync-sub" id="rc-sync-subreddit">r/all</span>
+            </div>
+            <div class="rc-sync-detail" id="rc-sync-detail">Draft: (No draft entered yet)</div>
           </div>
 
-          <!-- Karma Tier Selection -->
-          <div class="rc-karma-tier-group" id="rc-karma-pills">
-            <button type="button" class="rc-karma-pill active" data-karma="new">
-              🌱 New (<50 Karma)
-            </button>
-            <button type="button" class="rc-karma-pill" data-karma="growing">
-              🌿 Growing (50-500)
-            </button>
-            <button type="button" class="rc-karma-pill" data-karma="established">
-              🌳 Established (500+)
+          <!-- Feature 1: Unified Post Creator & Community Matcher -->
+          <div class="rc-unified-box">
+            <div class="rc-section-header">
+              <span class="rc-section-title">🚀 1. Generate Post & Match Safe Communities</span>
+            </div>
+            <div class="rc-create-topic-box">
+              <label class="rc-input-label">What do you want to share or ask?</label>
+              <textarea id="rc-create-topic-input" rows="2" placeholder="e.g. Built an AI Reddit assistant, looking for feedback on our architecture & early testers..."></textarea>
+            </div>
+            <button type="button" class="rc-primary-generate-btn" id="rc-btn-generate-full-post">
+              🚀 Generate Post & Safe Communities
             </button>
           </div>
 
-          <!-- Post Topic Input -->
-          <div class="rc-create-topic-box">
-            <label class="rc-input-label">What do you want to share or build?</label>
-            <textarea id="rc-create-topic-input" rows="2" placeholder="e.g. Built an AI tool for Reddit users, looking for beta testers & genuine feedback..."></textarea>
-          </div>
+          <!-- Feature 2 & 3: Draft Health & Rule Verifier -->
+          <div class="rc-unified-box" style="margin-top: 12px;">
+            <div class="rc-section-header">
+              <span class="rc-section-title">🛡️ 2. Review My Existing Draft</span>
+            </div>
+            <div class="rc-action-grid">
+              <button type="button" class="rc-action-card" data-action="check_anti_deletion">
+                <div class="rc-action-icon">🛡️</div>
+                <div class="rc-action-info">
+                  <span class="rc-action-label">Anti-Deletion Check</span>
+                  <span class="rc-action-sub">Scan for spam / auto-mod flags</span>
+                </div>
+              </button>
 
-          <!-- Phase 5 Action Grid -->
-          <div class="rc-action-grid">
-            <button type="button" class="rc-action-card" data-action="create_post">
-              <div class="rc-action-icon">✍️</div>
-              <div class="rc-action-info">
-                <span class="rc-action-label">Generate Post (Title + Body)</span>
-                <span class="rc-action-sub">Authentic hook & structured post</span>
-              </div>
-            </button>
-
-            <button type="button" class="rc-action-card" data-action="match_communities">
-              <div class="rc-action-icon">🎯</div>
-              <div class="rc-action-info">
-                <span class="rc-action-label">Find Safe Communities</span>
-                <span class="rc-action-sub">Karma-aware eligible subreddits</span>
-              </div>
-            </button>
-
-            <button type="button" class="rc-action-card" data-action="upgrade_post_rules">
-              <div class="rc-action-icon">🛡️</div>
-              <div class="rc-action-info">
-                <span class="rc-action-label">1-Click Rule Upgrader</span>
-                <span class="rc-action-sub">Check draft & fix rule conflicts</span>
-              </div>
-            </button>
-
-            <button type="button" class="rc-action-card" data-action="suggest_post_ideas">
-              <div class="rc-action-icon">💡</div>
-              <div class="rc-action-info">
-                <span class="rc-action-label">Suggest Post Ideas</span>
-                <span class="rc-action-sub">Concepts tailored to your profile</span>
-              </div>
-            </button>
+              <button type="button" class="rc-action-card" data-action="verify_community_rules">
+                <div class="rc-action-icon">📋</div>
+                <div class="rc-action-info">
+                  <span class="rc-action-label">Check & Fix Rules</span>
+                  <span class="rc-action-sub">Match against selected subreddit</span>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -248,7 +238,7 @@ const UIInjector = {
         <div class="rc-results-container" id="rc-results-container">
           <div class="rc-empty-state" id="rc-empty-state">
             <div class="rc-empty-icon">⚡</div>
-            <p>Select an action above to analyze or create with AI.</p>
+            <p>Select an action above to create or review with AI.</p>
           </div>
 
           <div class="rc-loading-state hidden" id="rc-loading-state">
@@ -268,7 +258,7 @@ const UIInjector = {
     document.body.appendChild(drawer);
     this.drawerElement = drawer;
 
-    // Attach drawer events
+    // Attach drawer close event
     drawer.querySelector("#rc-close-drawer").addEventListener("click", () => {
       this.closeDrawer();
     });
@@ -293,6 +283,7 @@ const UIInjector = {
       tabReply.classList.remove("active");
       createView.classList.remove("hidden");
       replyView.classList.add("hidden");
+      this.updateLiveSyncState();
     });
 
     // Persona Quick Editor in Drawer
@@ -334,14 +325,21 @@ const UIInjector = {
       });
     }
 
-    // Karma Pills Handler
-    drawer.querySelectorAll("#rc-karma-pills .rc-karma-pill").forEach((pill) => {
-      pill.addEventListener("click", () => {
-        drawer.querySelectorAll("#rc-karma-pills .rc-karma-pill").forEach((p) => p.classList.remove("active"));
-        pill.classList.add("active");
-        this.selectedKarmaTier = pill.getAttribute("data-karma");
+    // Unified Post Generator Button Handler
+    const genFullPostBtn = drawer.querySelector("#rc-btn-generate-full-post");
+    if (genFullPostBtn) {
+      genFullPostBtn.addEventListener("click", () => {
+        const topicInput = drawer.querySelector("#rc-create-topic-input");
+        const topic = topicInput ? topicInput.value.trim() : "";
+        if (this.callbacks.onActionTriggered) {
+          this.callbacks.onActionTriggered("generate_full_post_bundle", {
+            topic,
+            tone: this.selectedTone,
+            length: this.selectedLength,
+          });
+        }
       });
-    });
+    }
 
     // Tone Pills Handler
     drawer.querySelectorAll("#rc-tone-pills .rc-pill").forEach((pill) => {
@@ -410,11 +408,40 @@ const UIInjector = {
             length: this.selectedLength,
             customInstruction: customPrompt,
             topic,
-            karmaTier: this.selectedKarmaTier,
           });
         }
       });
     });
+  },
+
+  /**
+   * Updates live synchronization card with real-time Reddit state.
+   */
+  updateLiveSyncState() {
+    if (!window.ContextExtractor) return;
+    const sub = window.ContextExtractor.extractSubredditName();
+    const title = window.ContextExtractor.extractPostTitle();
+    const body = window.ContextExtractor.extractPostBody();
+    const user = window.ContextExtractor.extractUserProfile();
+
+    // Update User Profile Badge in header
+    const userBadge = document.getElementById("rc-user-account-badge");
+    if (userBadge) {
+      userBadge.innerHTML = `<span>👤 ${user.username} &bull; <strong style="color: #2ecc71;">${user.karma}</strong></span>`;
+    }
+
+    // Update Live Sync info on create page
+    const syncSub = document.getElementById("rc-sync-subreddit");
+    const syncDetail = document.getElementById("rc-sync-detail");
+
+    if (syncSub) syncSub.textContent = sub;
+    if (syncDetail) {
+      if (title || body) {
+        syncDetail.innerHTML = `<strong>Title:</strong> ${title ? title.substring(0, 45) + (title.length > 45 ? '...' : '') : '(No title yet)'} &bull; <strong>Body:</strong> ${body ? body.length + ' chars' : '(Empty)'}`;
+      } else {
+        syncDetail.textContent = "Draft: (No draft entered yet)";
+      }
+    }
   },
 
   /**
@@ -473,8 +500,10 @@ const UIInjector = {
     this.drawerElement.classList.add("rc-drawer-open");
     this.isDrawerOpen = true;
 
+    this.updateLiveSyncState();
+
     // Load active persona into drawer preview safely
-    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id && chrome.storage?.local) {
+    if (typeof chrome !== "undefined" && chrome.runtime?.id && chrome.storage?.local) {
       try {
         chrome.storage.local.get("settings", (res) => {
           if (chrome.runtime.lastError) return;
@@ -485,18 +514,10 @@ const UIInjector = {
             if (preview) preview.textContent = `"${settings.persona.substring(0, 80)}${settings.persona.length > 80 ? '...' : ''}"`;
             if (drawerInput) drawerInput.value = settings.persona;
           } else {
-            if (preview) preview.textContent = "No personal bio set. Click 'Edit Persona' to customize.";
+            if (preview) preview.textContent = "No personal bio set. Click 'Edit' to customize.";
           }
         });
-      } catch (e) {
-        // Context invalidated on un-refreshed tab
-      }
-    }
-
-    if (window.ContextExtractor) {
-      const sub = window.ContextExtractor.extractSubredditName();
-      const subEl = document.getElementById("rc-current-subreddit");
-      if (subEl) subEl.textContent = sub;
+      } catch (e) {}
     }
   },
 
@@ -596,7 +617,7 @@ const UIInjector = {
         const body = btn.getAttribute("data-body");
         this.insertPostTitle(title);
         this.insertPostBody(body);
-        btn.textContent = "✓ Title & Body Inserted!";
+        btn.textContent = "✓ Title & Body Inserted into Reddit!";
         setTimeout(() => {
           btn.textContent = "🚀 Insert Full Post into Reddit";
         }, 2500);
@@ -664,7 +685,7 @@ const UIInjector = {
   },
 
   /**
-   * Inserts text into Reddit's Post Title input on submit page.
+   * Robust Native Inserter for Reddit's Post Title input on submit page.
    */
   insertPostTitle(title) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -672,24 +693,38 @@ const UIInjector = {
     }
 
     const titleInput = window.ContextExtractor ? window.ContextExtractor.findPostTitleInput() : null;
-    if (!titleInput) return false;
+    if (!titleInput) {
+      console.warn("[Reddit Copilot] Title input not found on page, copied to clipboard.");
+      return false;
+    }
 
     titleInput.scrollIntoView({ behavior: "smooth", block: "center" });
     titleInput.focus();
 
-    if (titleInput.isContentEditable || titleInput.getAttribute("contenteditable") === "true") {
-      document.execCommand("selectAll", false, null);
-      document.execCommand("insertText", false, title);
-    } else {
+    try {
+      // Modern React/Custom element value setter override
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set ||
+                           Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+      if (nativeSetter) {
+        nativeSetter.call(titleInput, title);
+      } else {
+        titleInput.value = title;
+      }
+    } catch (e) {
       titleInput.value = title;
-      titleInput.dispatchEvent(new Event("input", { bubbles: true }));
-      titleInput.dispatchEvent(new Event("change", { bubbles: true }));
     }
+
+    titleInput.dispatchEvent(new Event("input", { bubbles: true }));
+    titleInput.dispatchEvent(new Event("change", { bubbles: true }));
+    titleInput.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+    titleInput.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true }));
+
+    this.updateLiveSyncState();
     return true;
   },
 
   /**
-   * Inserts text into Reddit's Post Body editor on submit page.
+   * Robust Native Inserter for Reddit's Post Body editor on submit page.
    */
   insertPostBody(body) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -697,7 +732,10 @@ const UIInjector = {
     }
 
     const bodyEditor = window.ContextExtractor ? window.ContextExtractor.findPostBodyInput() : null;
-    if (!bodyEditor) return false;
+    if (!bodyEditor) {
+      console.warn("[Reddit Copilot] Post body input not found on page, copied to clipboard.");
+      return false;
+    }
 
     bodyEditor.scrollIntoView({ behavior: "smooth", block: "center" });
     bodyEditor.focus();
@@ -706,10 +744,21 @@ const UIInjector = {
       document.execCommand("selectAll", false, null);
       document.execCommand("insertText", false, body);
     } else {
-      bodyEditor.value = body;
+      try {
+        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+        if (nativeSetter) {
+          nativeSetter.call(bodyEditor, body);
+        } else {
+          bodyEditor.value = body;
+        }
+      } catch (e) {
+        bodyEditor.value = body;
+      }
       bodyEditor.dispatchEvent(new Event("input", { bubbles: true }));
       bodyEditor.dispatchEvent(new Event("change", { bubbles: true }));
     }
+
+    this.updateLiveSyncState();
     return true;
   },
 
@@ -750,7 +799,7 @@ const UIInjector = {
     if (trigger) {
       trigger.scrollIntoView({ behavior: "smooth", block: "center" });
       trigger.click();
-      
+
       const childInput = trigger.querySelector("textarea, [contenteditable='true'], input");
       if (childInput) childInput.focus();
 

@@ -1,50 +1,48 @@
 /**
- * Background Service Worker for Reddit AI Copilot
+ * Reddit AI Copilot - Background Service Worker
+ * Handles extension settings, BYOK routing, context extraction requests,
+ * and calls AI providers with resilient model fallback.
  */
 
-importScripts("ai_service.js", "prompts.js");
+// Import background scripts
+importScripts("prompts.js", "ai_service.js");
 
-// Default configuration settings
 const DEFAULT_SETTINGS = {
-  provider: "gemini",
+  provider: "google",
   apiKey: "",
-  model: "gemini-3.7-flash",
+  model: "gemini-2.5-flash",
+  endpoint: "https://generativelanguage.googleapis.com",
   tone: "helpful",
-  customEndpoint: "",
+  persona: "",
+  karmaTier: "growing",
 };
 
-// Initialize default settings on installation
-chrome.runtime.onInstalled.addListener(async () => {
-  const stored = await chrome.storage.local.get("settings");
-  if (!stored.settings) {
-    await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
-  }
-  console.log("Reddit AI Copilot extension initialized.");
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.local.get("settings", (res) => {
+    if (!res.settings) {
+      chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
+    }
+  });
+  console.log("[Reddit Copilot] Background Service Worker Initialized.");
 });
 
-// Central message listener for popup and content scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  const { action, payload } = message;
+// Listener for messages from popup and content scripts
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  const { action, payload } = request;
 
   if (action === "TEST_CONNECTION") {
-    const { provider, apiKey, model, customEndpoint } = payload;
-    self.AI_SERVICE.testConnection(provider, apiKey, model, customEndpoint)
+    const { provider, apiKey, model, endpoint } = payload;
+    self.AI_SERVICE.testConnection({ provider, apiKey, model, endpoint })
       .then((res) => sendResponse(res))
       .catch((err) => sendResponse({ success: false, error: err.message }));
-    return true;
+    return true; // Keep message channel open for async response
   }
 
-  if (action === "GET_CONFIG") {
-    chrome.storage.local.get("settings").then((res) => {
-      sendResponse({ success: true, settings: res.settings || DEFAULT_SETTINGS });
-    });
-    return true;
-  }
-
-  if (action === "SAVE_CONFIG") {
-    chrome.storage.local.set({ settings: payload }).then(() => {
-      sendResponse({ success: true });
-    });
+  if (action === "GET_DYNAMIC_MODELS") {
+    const { provider, apiKey } = payload;
+    self.AI_SERVICE.fetchDynamicModels({ provider, apiKey })
+      .then((models) => sendResponse({ success: true, models }))
+      .catch((err) => sendResponse({ success: false, error: err.message }));
     return true;
   }
 
@@ -69,18 +67,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         originalText,
         refineInstruction,
         topic,
-        karmaTier,
         targetCommunity,
         draftTitle,
         draftBody,
       } = payload;
-      let promptConfig = null;
 
+      let promptConfig = null;
       const effectiveTone = tone || settings.tone || "helpful";
       const effectivePersona = settings.persona || "";
-      const effectiveKarma = karmaTier || settings.karmaTier || "new";
+      const userProfile = context?.userProfile || { username: "Authenticated Redditor", karma: "Active Karma", accountTier: "growing" };
 
-      if (actionType === "suggest_replies") {
+      // Route Unified Workflows
+      if (actionType === "generate_full_post_bundle") {
+        promptConfig = self.Prompts.getUnifiedGeneratePostPrompt({
+          topic,
+          userProfile,
+          userPersona: effectivePersona,
+          targetCommunity: targetCommunity || context?.subreddit,
+          rules: context?.rules || [],
+        });
+      } else if (actionType === "check_anti_deletion") {
+        promptConfig = self.Prompts.getAntiDeletionHealthPrompt({
+          draftTitle,
+          draftBody,
+          userProfile,
+          userPersona: effectivePersona,
+        });
+      } else if (actionType === "verify_community_rules") {
+        promptConfig = self.Prompts.getCommunityRuleCheckPrompt({
+          draftTitle,
+          draftBody,
+          subreddit: targetCommunity || context?.subreddit,
+          rules: context?.rules || [],
+          userProfile,
+          userPersona: effectivePersona,
+        });
+      } else if (actionType === "suggest_replies") {
         promptConfig = self.Prompts.getSuggestRepliesPrompt(
           context,
           effectiveTone,
@@ -95,33 +117,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           refineInstruction,
           effectivePersona
         );
-      } else if (actionType === "match_communities") {
-        promptConfig = self.Prompts.getKarmaAwareCommunityMatcherPrompt(
-          topic,
-          effectiveKarma,
-          effectivePersona
-        );
-      } else if (actionType === "create_post") {
-        promptConfig = self.Prompts.getCreatePostPrompt(
-          topic,
-          targetCommunity || context?.subreddit,
-          effectiveKarma,
-          effectivePersona,
-          context?.rules || []
-        );
-      } else if (actionType === "upgrade_post_rules") {
-        promptConfig = self.Prompts.getUpgradePostForRulesPrompt(
-          draftTitle,
-          draftBody,
-          targetCommunity || context?.subreddit,
-          context?.rules || [],
-          effectivePersona
-        );
-      } else if (actionType === "suggest_post_ideas") {
-        promptConfig = self.Prompts.getSuggestPostIdeasPrompt(
-          effectivePersona,
-          effectiveKarma
-        );
       } else if (actionType === "analyze_post") {
         promptConfig = self.Prompts.getAnalyzePostPrompt(context);
       } else if (actionType === "draft_question") {
@@ -135,18 +130,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       try {
         const result = await self.AI_SERVICE.generateAIResponse(
-          settings.provider,
-          settings.apiKey,
-          settings.model,
+          settings,
           promptConfig.systemPrompt,
-          promptConfig.userPrompt,
-          settings.customEndpoint
+          promptConfig.userPrompt
         );
-        sendResponse({ success: true, data: result, actionType });
+        sendResponse({ success: true, data: result });
       } catch (err) {
+        console.error("[Reddit Copilot Background Error]", err);
         sendResponse({ success: false, error: err.message });
       }
     });
-    return true;
+
+    return true; // Keep message channel open for async response
   }
 });
