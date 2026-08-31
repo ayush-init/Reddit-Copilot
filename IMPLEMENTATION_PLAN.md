@@ -160,59 +160,22 @@ reddit-copilot/
   - **Interactive Global Refine Box**: Input custom instructions (*"Make it shorter"*, *"Add Python tips"*) with instant AI apply.
   - **Card-Level Single Reply Refinement**: 🔄 *Refine* button on each generated reply card with inline AI prompt and single-card update.
 
----
-
-### ⏳ Phase 5: Community Rule & Self-Promotion Preflight Engine — `[READY / NEXT]`
-- **Scope**:
-  - Deep rule-matching matrix comparing proposed drafts against visible subreddit rules.
-  - Nuanced risk signals: *"Potential self-promotion concern"*, *"Potential rule conflict"*, *"Clear to post"*.
-  - Line-by-line constructive refinement suggestions.
-
----
-
-### ⏳ Phase 6: Post Creation Preflight (`/submit` page) — `[PLANNED]`
-- **Scope**:
-  - Integration on Reddit's submit page (`reddit.com/r/.../submit`).
-  - Scans draft title, body, and tags/flair against community submission rules.
-  - Recommends title improvements and formatting fixes before posting.
+### ✅ Phase 5: Create Post Assistant, Karma-Aware Community Matcher & 1-Click Rule Upgrader — `[COMPLETED]`
+- **Status**: Completed & Verified.
+- **Accomplishments**:
+  - **Submit Page Adaptive Mode (`reddit.com/submit`)**: Automatically toggles to "Create & Matcher" mode on post creation screens.
+  - **Account Karma & Age Filter (`Anti-AutoBan`)**: Solves the major ChatGPT flaw where new accounts get recommended giant subreddits and get instantly shadowbanned/auto-removed. Ranks subreddits into `🟢 Low-Karma Friendly`, `🎯 Target Niche`, and `🚀 High-Reach`.
+  - **Post Generator (Titles + Body + Flairs)**: Generates 3 hook variations and formatted markdown post body.
+  - **1-Click Post Inserters**: `Insert Title`, `Insert Post Body`, and `🚀 Insert Full Post into Reddit` buttons.
+  - **1-Click Rule Compliance Upgrader**: Scans post draft against subreddit rules, flags moderation concerns, and provides 1-click **"✨ Apply Upgraded Compliant Post into Reddit"**.
+  - **Personalized Post Ideas Strategist**: Suggests 3 tailor-made post concepts matching the user's saved persona.
 
 ---
 
-### ⏳ Phase 7: Local User Preferences & Extension Memory — `[PLANNED]`
+### ⏳ Phase 6: Production Polish, Shortcuts & Extension Distribution — `[READY / NEXT]`
 - **Scope**:
-  - Custom user instructions/bio (e.g. *"I am a full-stack engineer with 5 years React/Node experience"*).
-  - Saved reply templates & favorite tone configurations stored locally in `chrome.storage.local`.
-
----
-
-### ⏳ Phase 8: Contextual Community Matcher — `[PLANNED]`
-- **Scope**:
-  - Suggests the best-suited subreddits for a given topic or draft based on topical alignment.
-
----
-
-### ⏳ Phase 9: Permitted Account-Aware Intelligence — `[PLANNED]`
-- **Scope**:
-  - Tailors suggestions using user-defined persona guidelines.
-
----
-
-### ⏳ Phase 10: "What Should I Do?" AI Strategist — `[PLANNED]`
-- **Scope**:
-  - Feed-level opportunity scanner highlighting posts with high discussion potential.
-
----
-
-### ⏳ Phase 11: Cross-Session Local Personalization — `[PLANNED]`
-- **Scope**:
-  - Local heuristic learning of preferred response patterns that received user approval.
-
----
-
-### ⏳ Phase 12: Production Polish, Shortcuts & Packaging — `[PLANNED]`
-- **Scope**:
-  - Keyboard shortcut (`Ctrl+Shift+R`) to toggle drawer.
-  - Chrome Web Store compliant package and final distribution zip.
+  - Keyboard shortcuts (`Alt+Shift+C` / `Ctrl+Shift+R`) to instantly toggle Copilot.
+  - Chrome Web Store compliant packaging and icon polish.
 
 ---
 

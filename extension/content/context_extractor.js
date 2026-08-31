@@ -28,7 +28,7 @@ const ContextExtractor = {
   },
 
   /**
-   * Extracts the subreddit name from URL or DOM.
+   * Extracts the subreddit name from URL, DOM, or submit page dropdown.
    */
   extractSubredditName() {
     // 1. URL-based extraction (most reliable)
@@ -37,7 +37,19 @@ const ContextExtractor = {
       return `r/${match[1]}`;
     }
 
-    // 2. DOM fallback
+    // 2. Submit Page Community Selector Dropdown
+    const submitCommunityEl =
+      document.querySelector("faceplate-dropdown-menu button span") ||
+      document.querySelector("button[aria-label*='community' i]") ||
+      document.querySelector("div[data-testid='community-dropdown']");
+    if (submitCommunityEl && submitCommunityEl.textContent) {
+      const text = submitCommunityEl.textContent.trim();
+      const cleanMatch = text.match(/r\/([a-zA-Z0-9_]+)/i);
+      if (cleanMatch) return `r/${cleanMatch[1]}`;
+      if (text.startsWith("r/")) return text;
+    }
+
+    // 3. DOM fallback on feed/post
     const subredditEl =
       document.querySelector("a[data-testid='subreddit-name']") ||
       document.querySelector("shreddit-subreddit-icon") ||
@@ -56,6 +68,14 @@ const ContextExtractor = {
    * Extracts post title using resilient selectors across modern and classic Reddit.
    */
   extractPostTitle() {
+    // If on submit page, check user's draft title input
+    if (this.detectPageView() === "submit_post") {
+      const titleInput = this.findPostTitleInput();
+      if (titleInput) {
+        return (titleInput.value || titleInput.innerText || "").trim();
+      }
+    }
+
     const selectors = [
       "h1[slot='title']",
       "shreddit-title",
@@ -88,6 +108,14 @@ const ContextExtractor = {
    * Extracts post body text using resilient semantic selectors.
    */
   extractPostBody() {
+    // If on submit page, check user's draft post body editor
+    if (this.detectPageView() === "submit_post") {
+      const bodyInput = this.findPostBodyInput();
+      if (bodyInput) {
+        return (bodyInput.innerText || bodyInput.value || "").trim();
+      }
+    }
+
     const selectors = [
       "shreddit-post div[slot='text-body']",
       "div[data-testid='post-container'] div[data-click-id='text']",
@@ -115,7 +143,7 @@ const ContextExtractor = {
 
     // Modern Reddit shreddit rules / sidebar widgets
     const ruleElements = document.querySelectorAll(
-      "shreddit-rule, [data-testid='rule-item'], div[data-testid='community-rules'] li, div[aria-label='Rules'] li"
+      "shreddit-rule, [data-testid='rule-item'], div[data-testid='community-rules'] li, div[aria-label='Rules'] li, div[data-testid='posting-rules'] li"
     );
 
     if (ruleElements.length > 0) {
@@ -129,11 +157,11 @@ const ContextExtractor = {
 
     // Sidebar text fallback
     if (rules.length === 0) {
-      const sidebar = document.querySelector("aside, [data-testid='subreddit-sidebar'], #sidebar");
+      const sidebar = document.querySelector("aside, [data-testid='subreddit-sidebar'], #sidebar, div[slot='sidebar']");
       if (sidebar) {
-        const headings = sidebar.querySelectorAll("h2, h3, h4");
+        const headings = sidebar.querySelectorAll("h2, h3, h4, span");
         headings.forEach((h) => {
-          if (h.innerText.toLowerCase().includes("rule")) {
+          if (h.innerText && h.innerText.toLowerCase().includes("rule")) {
             const container = h.closest("div") || h.parentElement;
             if (container) {
               const ruleItems = container.querySelectorAll("li, p");
@@ -151,10 +179,51 @@ const ContextExtractor = {
   },
 
   /**
+   * Finds the title input element on Reddit's submit page.
+   */
+  findPostTitleInput() {
+    const selectors = [
+      "textarea[name='title']",
+      "textarea[placeholder*='Title']",
+      "faceplate-textarea-input textarea",
+      "input[name='title']",
+      "input[placeholder*='Title']",
+      "textarea[aria-label*='Title' i]",
+      "div[data-testid='post-title-text-area'] textarea",
+    ];
+
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el) return el;
+    }
+    return null;
+  },
+
+  /**
+   * Finds the post body contenteditable or textarea on Reddit's submit page.
+   */
+  findPostBodyInput() {
+    const selectors = [
+      "div[data-testid='post-composer'] div[contenteditable='true']",
+      "shreddit-composer div[contenteditable='true']",
+      "div[role='textbox'][contenteditable='true']",
+      "div[data-lexical-editor='true']",
+      "textarea[name='text']",
+      "textarea[placeholder*='Body text']",
+      "textarea[placeholder*='Text']",
+    ];
+
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el) return el;
+    }
+    return null;
+  },
+
+  /**
    * Finds the active comment box or post composer on the page.
    */
   findActiveCommentBox() {
-    // Check rich-text / draft / standard textareas in Reddit editor
     const selectors = [
       "div[data-testid='comment-submission-form-rich-text'] div[contenteditable='true']",
       "div[role='textbox'][contenteditable='true']",

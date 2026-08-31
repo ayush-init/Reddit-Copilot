@@ -1,7 +1,8 @@
 /**
  * Reddit AI Copilot - UI Injector
  * Creates floating badge, collapsible side drawer with Tone & Length Controls,
- * Interactive AI Refinement, and Auto-opening Smart Comment Inserter.
+ * Post Creator & Karma-Aware Community Matcher, Rule Compliance Upgrader,
+ * and Smart Text Inserters.
  */
 
 const UIInjector = {
@@ -11,6 +12,8 @@ const UIInjector = {
   observerTimeout: null,
   selectedTone: "helpful",
   selectedLength: "standard",
+  selectedKarmaTier: "new",
+  currentMode: "reply", // "reply" or "create"
 
   /**
    * Initializes and injects all UI components into the Reddit page.
@@ -73,6 +76,9 @@ const UIInjector = {
   injectDrawer() {
     if (document.getElementById("rc-drawer")) return;
 
+    const isSubmitPage = window.location.pathname.includes("/submit");
+    if (isSubmitPage) this.currentMode = "create";
+
     const drawer = document.createElement("aside");
     drawer.id = "rc-drawer";
     drawer.className = "rc-drawer rc-drawer-closed";
@@ -86,6 +92,12 @@ const UIInjector = {
           </div>
         </div>
         <button type="button" class="rc-close-btn" id="rc-close-drawer" title="Close Panel">&times;</button>
+      </div>
+
+      <!-- Mode Switcher Tabs -->
+      <div class="rc-mode-tabs">
+        <button type="button" class="rc-mode-tab ${this.currentMode === 'reply' ? 'active' : ''}" id="rc-tab-reply">💬 Reply Assistant</button>
+        <button type="button" class="rc-mode-tab ${this.currentMode === 'create' ? 'active' : ''}" id="rc-tab-create">✍️ Create & Matcher</button>
       </div>
 
       <div class="rc-drawer-body">
@@ -102,71 +114,133 @@ const UIInjector = {
           </div>
         </div>
 
-        <!-- Intent Prompt Section -->
-        <div class="rc-section-header">
-          <span class="rc-section-title">What do you want to do?</span>
-        </div>
-
-        <div class="rc-action-grid">
-          <button type="button" class="rc-action-card" data-action="suggest_replies">
-            <div class="rc-action-icon">💡</div>
-            <div class="rc-action-info">
-              <span class="rc-action-label">Suggest 3 Replies</span>
-              <span class="rc-action-sub">Personalized to your persona</span>
-            </div>
-          </button>
-
-          <button type="button" class="rc-action-card" data-action="analyze_post">
-            <div class="rc-action-icon">🔍</div>
-            <div class="rc-action-info">
-              <span class="rc-action-label">Summarize & Analyze</span>
-              <span class="rc-action-sub">Post core intent & guidelines</span>
-            </div>
-          </button>
-
-          <button type="button" class="rc-action-card" data-action="draft_question">
-            <div class="rc-action-icon">❓</div>
-            <div class="rc-action-info">
-              <span class="rc-action-label">Draft Engaging Question</span>
-              <span class="rc-action-sub">Thought-provoking discussion starter</span>
-            </div>
-          </button>
-
-          <button type="button" class="rc-action-card" data-action="preflight_check">
-            <div class="rc-action-icon">🛡️</div>
-            <div class="rc-action-info">
-              <span class="rc-action-label">Preflight Check Draft</span>
-              <span class="rc-action-sub">Check your draft against rules</span>
-            </div>
-          </button>
-        </div>
-
-        <!-- Phase 4: Tone & Length Customizer Bar -->
-        <div class="rc-customizer-panel">
-          <div class="rc-customizer-row">
-            <span class="rc-customizer-label">Tone:</span>
-            <div class="rc-pill-group" id="rc-tone-pills">
-              <button type="button" class="rc-pill active" data-tone="helpful">💡 Helpful</button>
-              <button type="button" class="rc-pill" data-tone="collaborative">🤝 Collab</button>
-              <button type="button" class="rc-pill" data-tone="pitch">⚡ Pitch</button>
-              <button type="button" class="rc-pill" data-tone="casual">☕ Casual</button>
-              <button type="button" class="rc-pill" data-tone="socratic">❓ Question</button>
-            </div>
+        <!-- 1. REPLY ASSISTANT MODE CONTAINER -->
+        <div id="rc-mode-reply-view" class="${this.currentMode === 'reply' ? '' : 'hidden'}">
+          <div class="rc-section-header">
+            <span class="rc-section-title">What do you want to do?</span>
           </div>
 
-          <div class="rc-customizer-row">
-            <span class="rc-customizer-label">Length:</span>
-            <div class="rc-pill-group" id="rc-length-pills">
-              <button type="button" class="rc-pill" data-length="short">⚡ Short</button>
-              <button type="button" class="rc-pill active" data-length="standard">📄 Standard</button>
-              <button type="button" class="rc-pill" data-length="indepth">📚 In-Depth</button>
-            </div>
+          <div class="rc-action-grid">
+            <button type="button" class="rc-action-card" data-action="suggest_replies">
+              <div class="rc-action-icon">💡</div>
+              <div class="rc-action-info">
+                <span class="rc-action-label">Suggest 3 Replies</span>
+                <span class="rc-action-sub">Personalized to your persona</span>
+              </div>
+            </button>
+
+            <button type="button" class="rc-action-card" data-action="analyze_post">
+              <div class="rc-action-icon">🔍</div>
+              <div class="rc-action-info">
+                <span class="rc-action-label">Summarize & Analyze</span>
+                <span class="rc-action-sub">Post core intent & guidelines</span>
+              </div>
+            </button>
+
+            <button type="button" class="rc-action-card" data-action="draft_question">
+              <div class="rc-action-icon">❓</div>
+              <div class="rc-action-info">
+                <span class="rc-action-label">Draft Engaging Question</span>
+                <span class="rc-action-sub">Thought-provoking discussion starter</span>
+              </div>
+            </button>
+
+            <button type="button" class="rc-action-card" data-action="preflight_check">
+              <div class="rc-action-icon">🛡️</div>
+              <div class="rc-action-info">
+                <span class="rc-action-label">Preflight Check Draft</span>
+                <span class="rc-action-sub">Check your draft against rules</span>
+              </div>
+            </button>
           </div>
 
-          <!-- Interactive Custom Refinement Prompt Box -->
-          <div class="rc-refine-box">
-            <input type="text" id="rc-custom-refine-input" placeholder="Custom direction (e.g. 'Make it shorter', 'Add Python tips')..." />
-            <button type="button" id="rc-custom-refine-btn" title="Generate with custom prompt">✨ Apply</button>
+          <!-- Phase 4: Tone & Length Customizer Bar -->
+          <div class="rc-customizer-panel">
+            <div class="rc-customizer-row">
+              <span class="rc-customizer-label">Tone:</span>
+              <div class="rc-pill-group" id="rc-tone-pills">
+                <button type="button" class="rc-pill active" data-tone="helpful">💡 Helpful</button>
+                <button type="button" class="rc-pill" data-tone="collaborative">🤝 Collab</button>
+                <button type="button" class="rc-pill" data-tone="pitch">⚡ Pitch</button>
+                <button type="button" class="rc-pill" data-tone="casual">☕ Casual</button>
+                <button type="button" class="rc-pill" data-tone="socratic">❓ Question</button>
+              </div>
+            </div>
+
+            <div class="rc-customizer-row">
+              <span class="rc-customizer-label">Length:</span>
+              <div class="rc-pill-group" id="rc-length-pills">
+                <button type="button" class="rc-pill" data-length="short">⚡ Short</button>
+                <button type="button" class="rc-pill active" data-length="standard">📄 Standard</button>
+                <button type="button" class="rc-pill" data-length="indepth">📚 In-Depth</button>
+              </div>
+            </div>
+
+            <div class="rc-refine-box">
+              <input type="text" id="rc-custom-refine-input" placeholder="Custom direction (e.g. 'Make it shorter', 'Add Python tips')..." />
+              <button type="button" id="rc-custom-refine-btn" title="Generate with custom prompt">✨ Apply</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. POST CREATOR & KARMA MATCHER MODE CONTAINER (Phase 5) -->
+        <div id="rc-mode-create-view" class="${this.currentMode === 'create' ? '' : 'hidden'}">
+          <div class="rc-section-header">
+            <span class="rc-section-title">Account Karma Level (Anti-AutoBan)</span>
+          </div>
+
+          <!-- Karma Tier Selection -->
+          <div class="rc-karma-tier-group" id="rc-karma-pills">
+            <button type="button" class="rc-karma-pill active" data-karma="new">
+              🌱 New (<50 Karma)
+            </button>
+            <button type="button" class="rc-karma-pill" data-karma="growing">
+              🌿 Growing (50-500)
+            </button>
+            <button type="button" class="rc-karma-pill" data-karma="established">
+              🌳 Established (500+)
+            </button>
+          </div>
+
+          <!-- Post Topic Input -->
+          <div class="rc-create-topic-box">
+            <label class="rc-input-label">What do you want to share or build?</label>
+            <textarea id="rc-create-topic-input" rows="2" placeholder="e.g. Built an AI tool for Reddit users, looking for beta testers & genuine feedback..."></textarea>
+          </div>
+
+          <!-- Phase 5 Action Grid -->
+          <div class="rc-action-grid">
+            <button type="button" class="rc-action-card" data-action="create_post">
+              <div class="rc-action-icon">✍️</div>
+              <div class="rc-action-info">
+                <span class="rc-action-label">Generate Post (Title + Body)</span>
+                <span class="rc-action-sub">Authentic hook & structured post</span>
+              </div>
+            </button>
+
+            <button type="button" class="rc-action-card" data-action="match_communities">
+              <div class="rc-action-icon">🎯</div>
+              <div class="rc-action-info">
+                <span class="rc-action-label">Find Safe Communities</span>
+                <span class="rc-action-sub">Karma-aware eligible subreddits</span>
+              </div>
+            </button>
+
+            <button type="button" class="rc-action-card" data-action="upgrade_post_rules">
+              <div class="rc-action-icon">🛡️</div>
+              <div class="rc-action-info">
+                <span class="rc-action-label">1-Click Rule Upgrader</span>
+                <span class="rc-action-sub">Check draft & fix rule conflicts</span>
+              </div>
+            </button>
+
+            <button type="button" class="rc-action-card" data-action="suggest_post_ideas">
+              <div class="rc-action-icon">💡</div>
+              <div class="rc-action-info">
+                <span class="rc-action-label">Suggest Post Ideas</span>
+                <span class="rc-action-sub">Concepts tailored to your profile</span>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -174,7 +248,7 @@ const UIInjector = {
         <div class="rc-results-container" id="rc-results-container">
           <div class="rc-empty-state" id="rc-empty-state">
             <div class="rc-empty-icon">⚡</div>
-            <p>Select an action above to analyze this discussion with AI.</p>
+            <p>Select an action above to analyze or create with AI.</p>
           </div>
 
           <div class="rc-loading-state hidden" id="rc-loading-state">
@@ -197,6 +271,28 @@ const UIInjector = {
     // Attach drawer events
     drawer.querySelector("#rc-close-drawer").addEventListener("click", () => {
       this.closeDrawer();
+    });
+
+    // Mode Switcher Tabs Handlers
+    const tabReply = drawer.querySelector("#rc-tab-reply");
+    const tabCreate = drawer.querySelector("#rc-tab-create");
+    const replyView = drawer.querySelector("#rc-mode-reply-view");
+    const createView = drawer.querySelector("#rc-mode-create-view");
+
+    tabReply.addEventListener("click", () => {
+      this.currentMode = "reply";
+      tabReply.classList.add("active");
+      tabCreate.classList.remove("active");
+      replyView.classList.remove("hidden");
+      createView.classList.add("hidden");
+    });
+
+    tabCreate.addEventListener("click", () => {
+      this.currentMode = "create";
+      tabCreate.classList.add("active");
+      tabReply.classList.remove("active");
+      createView.classList.remove("hidden");
+      replyView.classList.add("hidden");
     });
 
     // Persona Quick Editor in Drawer
@@ -232,13 +328,21 @@ const UIInjector = {
       });
     }
 
+    // Karma Pills Handler
+    drawer.querySelectorAll("#rc-karma-pills .rc-karma-pill").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        drawer.querySelectorAll("#rc-karma-pills .rc-karma-pill").forEach((p) => p.classList.remove("active"));
+        pill.classList.add("active");
+        this.selectedKarmaTier = pill.getAttribute("data-karma");
+      });
+    });
+
     // Tone Pills Handler
     drawer.querySelectorAll("#rc-tone-pills .rc-pill").forEach((pill) => {
       pill.addEventListener("click", () => {
         drawer.querySelectorAll("#rc-tone-pills .rc-pill").forEach((p) => p.classList.remove("active"));
         pill.classList.add("active");
         this.selectedTone = pill.getAttribute("data-tone");
-        // Trigger auto re-generation with new tone
         if (this.callbacks.onActionTriggered) {
           const customPrompt = drawer.querySelector("#rc-custom-refine-input")?.value || "";
           this.callbacks.onActionTriggered("suggest_replies", {
@@ -256,7 +360,6 @@ const UIInjector = {
         drawer.querySelectorAll("#rc-length-pills .rc-pill").forEach((p) => p.classList.remove("active"));
         pill.classList.add("active");
         this.selectedLength = pill.getAttribute("data-length");
-        // Trigger auto re-generation with new length
         if (this.callbacks.onActionTriggered) {
           const customPrompt = drawer.querySelector("#rc-custom-refine-input")?.value || "";
           this.callbacks.onActionTriggered("suggest_replies", {
@@ -283,9 +386,7 @@ const UIInjector = {
         }
       });
       refineInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          refineBtn.click();
-        }
+        if (e.key === "Enter") refineBtn.click();
       });
     }
 
@@ -293,12 +394,17 @@ const UIInjector = {
     drawer.querySelectorAll(".rc-action-card").forEach((btn) => {
       btn.addEventListener("click", () => {
         const action = btn.getAttribute("data-action");
+        const topicInput = drawer.querySelector("#rc-create-topic-input");
+        const topic = topicInput ? topicInput.value.trim() : "";
+        const customPrompt = drawer.querySelector("#rc-custom-refine-input")?.value || "";
+
         if (this.callbacks.onActionTriggered) {
-          const customPrompt = drawer.querySelector("#rc-custom-refine-input")?.value || "";
           this.callbacks.onActionTriggered(action, {
             tone: this.selectedTone,
             length: this.selectedLength,
             customInstruction: customPrompt,
+            topic,
+            karmaTier: this.selectedKarmaTier,
           });
         }
       });
@@ -426,7 +532,7 @@ const UIInjector = {
   },
 
   /**
-   * Binds click handlers to "Insert into Comment", "Copy", and "🔄 Refine this" buttons.
+   * Binds click handlers to "Insert into Comment", "Insert Title", "Insert Body", "Insert Full Post", "Copy", and "🔄 Refine" buttons.
    */
   attachResultButtonEvents() {
     const resultsContent = document.getElementById("rc-results-content");
@@ -438,15 +544,49 @@ const UIInjector = {
         const text = btn.getAttribute("data-text");
         btn.textContent = "Opening & Inserting...";
         this.smartInsertIntoCommentBox(text, (success) => {
-          if (success) {
-            btn.textContent = "✓ Inserted in Box!";
-          } else {
-            btn.textContent = "✓ Copied to Clipboard!";
-          }
+          btn.textContent = success ? "✓ Inserted in Box!" : "✓ Copied to Clipboard!";
           setTimeout(() => {
             btn.textContent = "Insert into Comment";
           }, 2500);
         });
+      });
+    });
+
+    // Handle "Insert Title"
+    resultsContent.querySelectorAll(".rc-insert-title-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const title = btn.getAttribute("data-title");
+        const success = this.insertPostTitle(title);
+        btn.textContent = success ? "✓ Title Inserted!" : "✓ Copied Title!";
+        setTimeout(() => {
+          btn.textContent = "Insert Title";
+        }, 2000);
+      });
+    });
+
+    // Handle "Insert Body"
+    resultsContent.querySelectorAll(".rc-insert-body-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const body = btn.getAttribute("data-body");
+        const success = this.insertPostBody(body);
+        btn.textContent = success ? "✓ Body Inserted!" : "✓ Copied Body!";
+        setTimeout(() => {
+          btn.textContent = "Insert Post Body";
+        }, 2000);
+      });
+    });
+
+    // Handle "Insert Full Post (Title + Body)"
+    resultsContent.querySelectorAll(".rc-insert-full-post-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const title = btn.getAttribute("data-title");
+        const body = btn.getAttribute("data-body");
+        this.insertPostTitle(title);
+        this.insertPostBody(body);
+        btn.textContent = "✓ Title & Body Inserted!";
+        setTimeout(() => {
+          btn.textContent = "🚀 Insert Full Post into Reddit";
+        }, 2500);
       });
     });
 
@@ -489,7 +629,6 @@ const UIInjector = {
               const textEl = card.querySelector(".rc-card-text");
               if (textEl) textEl.textContent = refinedData.refinedText;
 
-              // Update data-text attributes on buttons
               const insertBtn = card.querySelector(".rc-insert-btn");
               const copyBtn = card.querySelector(".rc-copy-btn");
               if (insertBtn) insertBtn.setAttribute("data-text", refinedData.refinedText);
@@ -509,6 +648,56 @@ const UIInjector = {
         }
       });
     });
+  },
+
+  /**
+   * Inserts text into Reddit's Post Title input on submit page.
+   */
+  insertPostTitle(title) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(title).catch(() => {});
+    }
+
+    const titleInput = window.ContextExtractor ? window.ContextExtractor.findPostTitleInput() : null;
+    if (!titleInput) return false;
+
+    titleInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    titleInput.focus();
+
+    if (titleInput.isContentEditable || titleInput.getAttribute("contenteditable") === "true") {
+      document.execCommand("selectAll", false, null);
+      document.execCommand("insertText", false, title);
+    } else {
+      titleInput.value = title;
+      titleInput.dispatchEvent(new Event("input", { bubbles: true }));
+      titleInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    return true;
+  },
+
+  /**
+   * Inserts text into Reddit's Post Body editor on submit page.
+   */
+  insertPostBody(body) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(body).catch(() => {});
+    }
+
+    const bodyEditor = window.ContextExtractor ? window.ContextExtractor.findPostBodyInput() : null;
+    if (!bodyEditor) return false;
+
+    bodyEditor.scrollIntoView({ behavior: "smooth", block: "center" });
+    bodyEditor.focus();
+
+    if (bodyEditor.isContentEditable || bodyEditor.getAttribute("contenteditable") === "true") {
+      document.execCommand("selectAll", false, null);
+      document.execCommand("insertText", false, body);
+    } else {
+      bodyEditor.value = body;
+      bodyEditor.dispatchEvent(new Event("input", { bubbles: true }));
+      bodyEditor.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    return true;
   },
 
   /**

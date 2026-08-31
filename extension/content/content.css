@@ -147,6 +147,38 @@
   color: #ffffff !important;
 }
 
+/* Mode Switcher Tabs */
+.rc-mode-tabs {
+  display: flex !important;
+  border-bottom: 1px solid #272729 !important;
+  background-color: #0e1113 !important;
+  width: 100% !important;
+}
+
+.rc-mode-tab {
+  all: unset !important;
+  box-sizing: border-box !important;
+  flex: 1 1 50% !important;
+  text-align: center !important;
+  padding: 10px 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #818384 !important;
+  cursor: pointer !important;
+  border-bottom: 2px solid transparent !important;
+  transition: all 0.15s ease !important;
+}
+
+.rc-mode-tab:hover {
+  color: #ffffff !important;
+}
+
+.rc-mode-tab.active {
+  color: #ff4500 !important;
+  border-bottom: 2px solid #ff4500 !important;
+  background-color: rgba(255, 69, 0, 0.05) !important;
+}
+
 /* 3. Drawer Body */
 .rc-drawer-body {
   flex: 1 1 auto !important;
@@ -155,6 +187,157 @@
   display: flex !important;
   flex-direction: column !important;
   gap: 16px !important;
+}
+
+/* Karma Tier Group */
+.rc-karma-tier-group {
+  display: flex !important;
+  gap: 6px !important;
+  width: 100% !important;
+  margin-bottom: 6px !important;
+}
+
+.rc-karma-pill {
+  all: unset !important;
+  box-sizing: border-box !important;
+  flex: 1 1 auto !important;
+  background-color: #1a1a1b !important;
+  border: 1px solid #343536 !important;
+  color: #818384 !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 6px 4px !important;
+  border-radius: 6px !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.rc-karma-pill:hover {
+  border-color: #2ecc71 !important;
+  color: #ffffff !important;
+}
+
+.rc-karma-pill.active {
+  background-color: rgba(46, 204, 113, 0.15) !important;
+  border-color: #2ecc71 !important;
+  color: #2ecc71 !important;
+  font-weight: 700 !important;
+}
+
+/* Create Topic Input Box */
+.rc-create-topic-box {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  width: 100% !important;
+  margin-bottom: 6px !important;
+}
+
+.rc-input-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #d7dadc !important;
+}
+
+.rc-create-topic-box textarea {
+  all: unset !important;
+  box-sizing: border-box !important;
+  background-color: #0e1113 !important;
+  border: 1px solid #343536 !important;
+  border-radius: 6px !important;
+  color: #ffffff !important;
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  width: 100% !important;
+}
+
+.rc-create-topic-box textarea:focus {
+  border-color: #ff4500 !important;
+}
+
+/* Community Link & Karma Alert */
+.rc-community-link {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #ff8c66 !important;
+  text-decoration: none !important;
+}
+
+.rc-community-link:hover {
+  text-decoration: underline !important;
+}
+
+.rc-karma-alert {
+  background-color: rgba(46, 204, 113, 0.08) !important;
+  border: 1px solid rgba(46, 204, 113, 0.25) !important;
+  border-radius: 4px !important;
+  padding: 6px 8px !important;
+  font-size: 11px !important;
+  color: #2ecc71 !important;
+  display: flex !important;
+  gap: 6px !important;
+  margin-top: 4px !important;
+}
+
+.rc-karma-alert-title {
+  font-weight: 700 !important;
+}
+
+.rc-rule-issues-box {
+  background-color: rgba(231, 76, 60, 0.1) !important;
+  border: 1px solid rgba(231, 76, 60, 0.3) !important;
+  border-radius: 6px !important;
+  padding: 8px 10px !important;
+  margin-top: 4px !important;
+}
+
+.rc-rule-issues-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #e74c3c !important;
+}
+
+/* Post Inserter Buttons */
+.rc-insert-title-btn,
+.rc-insert-body-btn {
+  all: unset !important;
+  box-sizing: border-box !important;
+  flex: 1 1 auto !important;
+  background-color: #ff4500 !important;
+  color: #ffffff !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  text-align: center !important;
+}
+
+.rc-insert-title-btn:hover,
+.rc-insert-body-btn:hover {
+  background-color: #e03d00 !important;
+}
+
+.rc-insert-full-post-btn {
+  all: unset !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  background-color: #ff4500 !important;
+  color: #ffffff !important;
+  border-radius: 6px !important;
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.rc-insert-full-post-btn:hover {
+  background-color: #e03d00 !important;
+  transform: translateY(-1px) !important;
 }
 
 /* Persona Banner */

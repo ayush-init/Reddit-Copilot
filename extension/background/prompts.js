@@ -1,6 +1,7 @@
 /**
  * Reddit AI Copilot - Prompt Engineering Templates
- * Structured JSON prompt templates with persona personalization, tone & length control, explainability ("Why?"), and responsible risk flags.
+ * Structured JSON prompt templates with persona personalization, tone & length control,
+ * Karma-aware community matching, and 1-click rule compliance upgrade.
  */
 
 const Prompts = {
@@ -127,6 +128,173 @@ ${refineInstruction}
 """
 
 Rewrite and refine the draft according to the user's request.`;
+
+    return { systemPrompt, userPrompt };
+  },
+
+  /**
+   * Phase 5: Recommends karma-aware, account-age eligible subreddits for a post topic.
+   * Fixes the ChatGPT flaw of recommending giant subreddits where new accounts get instantly auto-banned.
+   */
+  getKarmaAwareCommunityMatcherPrompt(topic, karmaTier = "new", userPersona = "") {
+    const tierDescriptions = {
+      new: "User has a NEW or LOW-KARMA account (<50 karma / <30 days). DO NOT recommend subreddits with strict auto-mod minimums (like r/AskReddit, r/technology, r/programming, r/entrepreneur). Recommend beginner-friendly, lenient builder/niche communities (like r/SideProject, r/roastmystartup, r/selfhosted, r/webdev, r/buildinpublic, r/IndieBiz) where they can post without deletion.",
+      growing: "User has a GROWING account (50-500 karma / 1-6 months). Eligible for most mid-tier developer, startup, and technical niche communities.",
+      established: "User has an ESTABLISHED account (500+ karma). Can post in larger subreddits with standard rule compliance.",
+    }[karmaTier] || "New or growing Reddit account.";
+
+    const systemPrompt = `You are Reddit Copilot Community Matcher.
+Analyze the user's topic and match them with 3-4 suitable Reddit communities.
+
+CRITICAL REQUIREMENT - ACCOUNT TIER & KARMA SAFETY:
+${tierDescriptions}
+
+User Persona & Background:
+${userPersona || "Builder / Reddit Contributor"}
+
+You MUST respond strictly with a JSON object in this exact schema:
+{
+  "topicAnalysis": "1 sentence breakdown of the user's core theme and audience.",
+  "recommendedCommunities": [
+    {
+      "name": "r/SubredditName",
+      "tierCategory": "🟢 Low-Karma Friendly" | "🎯 Target Niche" | "🚀 High-Reach",
+      "whySuitable": "Why this community is perfect for the user's topic and persona.",
+      "karmaEligibility": "Safe for new accounts / Minimum 50 karma recommended / Strict 100+ karma filter",
+      "postingTips": "Key guideline to follow (e.g., 'Requires flair [Project]', 'No direct sales links in title')"
+    }
+  ]
+}`;
+
+    const userPrompt = `Topic / Post Idea:
+"""
+${topic || "Sharing my new developer tool / project feedback"}
+"""
+User Account Level: ${karmaTier}
+
+Recommend 3-4 safe, high-engagement communities for this post topic.`;
+
+    return { systemPrompt, userPrompt };
+  },
+
+  /**
+   * Phase 5: Generates complete Reddit Post (Title options, formatted Body text, Flairs, and Rule Checks).
+   */
+  getCreatePostPrompt(topic, targetCommunity, karmaTier = "new", userPersona = "", rules = []) {
+    const systemPrompt = `You are Reddit Copilot Post Creator.
+You help Redditors craft high-impact, authentic, and community-compliant Reddit posts that spark discussions, get valuable feedback, and respect community standards (no spammy marketing).
+
+User Persona:
+${userPersona || "Experienced tech professional / builder"}
+
+Target Subreddit: ${targetCommunity || "Relevant community"}
+Subreddit Rules:
+${rules.join("\n") || "Standard Reddit guidelines apply."}
+
+You MUST respond strictly with a JSON object in this exact schema:
+{
+  "recommendedTitles": [
+    {
+      "title": "Title Option 1 (Direct & Authentic)",
+      "flair": "e.g. [Project] or [Discussion] or [Feedback]",
+      "angle": "Why this title sparks interest without sounding like self-promotion."
+    },
+    {
+      "title": "Title Option 2 (Story / Problem Solved)",
+      "flair": "e.g. [Showcase] or [Case Study]",
+      "angle": "Why this narrative hook engages technical builders."
+    },
+    {
+      "title": "Title Option 3 (Curiosity & Lessons Learned)",
+      "flair": "e.g. [Question] or [Lessons]",
+      "angle": "Why this vulnerability-first angle invites constructive feedback."
+    }
+  ],
+  "formattedBody": "The complete, beautifully structured Markdown post body (with clear headings, bullet points, honest background, problem, solution, and open question to community)...",
+  "ruleComplianceCheck": "Assessment of how this post complies with the subreddit's rules.",
+  "actionableTip": "One key tip before hitting submit (e.g. 'Reply to the first 3 comments within 1 hour to boost algorithm')"
+}`;
+
+    const userPrompt = `Topic / Intent:
+"""
+${topic || "Sharing my project and asking for feedback"}
+"""
+Target Subreddit: ${targetCommunity || "General"}
+Account Level: ${karmaTier}
+
+Generate 3 high-impact post titles and a complete, value-packed post body.`;
+
+    return { systemPrompt, userPrompt };
+  },
+
+  /**
+   * Phase 5: 1-Click Rule Compliance Upgrader.
+   * Analyzes draft against subreddit rules and rewrites it to 100% comply.
+   */
+  getUpgradePostForRulesPrompt(draftTitle, draftBody, subreddit, rules = [], userPersona = "") {
+    const systemPrompt = `You are Reddit Copilot Rule Compliance & Auto-Mod Specialist.
+Analyze the user's draft post against the target subreddit's visible rules and standard moderation filters (self-promotion guidelines, required title tags, link restrictions, minimum word counts).
+
+Identify any rule conflicts and provide an "UPGRADED & REFINED" version of the Title and Body that 100% complies with this specific subreddit while preserving the user's authentic message.
+
+Schema:
+{
+  "complianceStatus": "🟢 Rule Compliant" | "🟡 Minor Adjustments Recommended" | "🔴 Conflicts with Subreddit Rules",
+  "issuesFound": [
+    "Specific conflict found (e.g. 'Rule 3 forbids direct affiliate links', 'Title missing required tag [Project]')"
+  ],
+  "upgradedTitle": "The compliant, refined post title...",
+  "upgradedBody": "The compliant, refined post body formatted in clean markdown...",
+  "upgradeExplanation": "Summary of what was fixed to make the post 100% compliant and avoid auto-removal."
+}`;
+
+    const userPrompt = `Target Subreddit: ${subreddit || "r/all"}
+Visible Community Rules:
+${rules.join("\n") || "No explicit rules found, apply standard Reddit content policy."}
+
+User's Draft Title:
+"""
+${draftTitle || "(No title entered)"}
+"""
+
+User's Draft Body:
+"""
+${draftBody || "(No body entered)"}
+"""
+
+User Persona:
+${userPersona || "Builder"}
+
+Perform a deep rule preflight check and provide the 1-click upgraded compliant version.`;
+
+    return { systemPrompt, userPrompt };
+  },
+
+  /**
+   * Phase 5: Suggests personalized post ideas based on user's profile and karma level.
+   */
+  getSuggestPostIdeasPrompt(userPersona = "", karmaTier = "new") {
+    const systemPrompt = `You are Reddit Copilot Content Strategist.
+Suggest 3 high-impact, engaging Reddit post ideas that this user can create based on their persona, skills, and account karma level.
+
+User Persona:
+${userPersona || "Software Engineer & AI Builder"}
+
+Account Level: ${karmaTier}
+
+Schema:
+{
+  "ideas": [
+    {
+      "topic": "Post Concept & Hook",
+      "targetSubreddit": "r/SubredditName",
+      "format": "e.g. 'Case Study / Lessons Learned' or 'Open Tool Feedback' or 'Technical Architecture Breakdown'",
+      "whyItWorks": "Why this post will gain upvotes and genuine discussions without being removed."
+    }
+  ]
+}`;
+
+    const userPrompt = `Suggest 3 personalized, high-engagement post concepts suitable for this user.`;
 
     return { systemPrompt, userPrompt };
   },

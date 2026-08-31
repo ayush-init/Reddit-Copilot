@@ -59,11 +59,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
-      const { actionType, context, draftText, tone, length, customInstruction, originalText, refineInstruction } = payload;
+      const {
+        actionType,
+        context,
+        draftText,
+        tone,
+        length,
+        customInstruction,
+        originalText,
+        refineInstruction,
+        topic,
+        karmaTier,
+        targetCommunity,
+        draftTitle,
+        draftBody,
+      } = payload;
       let promptConfig = null;
 
       const effectiveTone = tone || settings.tone || "helpful";
       const effectivePersona = settings.persona || "";
+      const effectiveKarma = karmaTier || settings.karmaTier || "new";
 
       if (actionType === "suggest_replies") {
         promptConfig = self.Prompts.getSuggestRepliesPrompt(
@@ -79,6 +94,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           originalText,
           refineInstruction,
           effectivePersona
+        );
+      } else if (actionType === "match_communities") {
+        promptConfig = self.Prompts.getKarmaAwareCommunityMatcherPrompt(
+          topic,
+          effectiveKarma,
+          effectivePersona
+        );
+      } else if (actionType === "create_post") {
+        promptConfig = self.Prompts.getCreatePostPrompt(
+          topic,
+          targetCommunity || context?.subreddit,
+          effectiveKarma,
+          effectivePersona,
+          context?.rules || []
+        );
+      } else if (actionType === "upgrade_post_rules") {
+        promptConfig = self.Prompts.getUpgradePostForRulesPrompt(
+          draftTitle,
+          draftBody,
+          targetCommunity || context?.subreddit,
+          context?.rules || [],
+          effectivePersona
+        );
+      } else if (actionType === "suggest_post_ideas") {
+        promptConfig = self.Prompts.getSuggestPostIdeasPrompt(
+          effectivePersona,
+          effectiveKarma
         );
       } else if (actionType === "analyze_post") {
         promptConfig = self.Prompts.getAnalyzePostPrompt(context);

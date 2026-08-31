@@ -1,10 +1,11 @@
 /**
  * Reddit AI Copilot - Content Controller
  * Connects ContextExtractor, UIInjector, and Background AI Service.
+ * Supports Reply Assistant, Karma-Aware Community Matcher, Post Creator, and Rule Upgrader.
  */
 
 (function () {
-  console.log("%c[Reddit AI Copilot]%c Loaded & Active (Phase 4).", "color: #ff4500; font-weight: bold;", "color: #2ecc71;");
+  console.log("%c[Reddit AI Copilot]%c Loaded & Active (Phase 5).", "color: #ff4500; font-weight: bold;", "color: #2ecc71;");
 
   // Initialize UI Injector with Action & Refine Handlers
   if (window.UIInjector) {
@@ -22,6 +23,8 @@
 
     const context = window.ContextExtractor.collectCurrentContext();
     let draftText = "";
+    let draftTitle = "";
+    let draftBody = "";
 
     if (actionType === "preflight_check") {
       const editor = window.ContextExtractor.findActiveCommentBox();
@@ -41,18 +44,27 @@
       }
     }
 
+    if (actionType === "upgrade_post_rules") {
+      draftTitle = window.ContextExtractor.extractPostTitle();
+      draftBody = window.ContextExtractor.extractPostBody();
+    }
+
     // Dynamic loading messages
     let loadingMsg = "Analyzing with AI...";
     if (actionType === "suggest_replies") {
-      const toneLabel = options.tone || "helpful";
-      const lengthLabel = options.length || "standard";
-      loadingMsg = `Generating ${lengthLabel} replies with ${toneLabel} tone...`;
+      loadingMsg = `Generating ${options.length || "standard"} replies with ${options.tone || "helpful"} tone...`;
+    } else if (actionType === "match_communities") {
+      loadingMsg = "Finding karma-safe & eligible communities for your topic...";
+    } else if (actionType === "create_post") {
+      loadingMsg = "Crafting high-converting titles & formatted post body...";
+    } else if (actionType === "upgrade_post_rules") {
+      loadingMsg = "Scanning draft against subreddit rules & auto-mod filters...";
+    } else if (actionType === "suggest_post_ideas") {
+      loadingMsg = "Brainstorming personalized post ideas for your profile...";
     } else if (actionType === "analyze_post") {
       loadingMsg = "Summarizing post premise, OP intent & guidelines...";
     } else if (actionType === "draft_question") {
       loadingMsg = "Crafting engaging discussion questions...";
-    } else if (actionType === "preflight_check") {
-      loadingMsg = "Checking draft against community rules...";
     }
 
     window.UIInjector.setLoading(true, loadingMsg);
@@ -65,9 +77,14 @@
           actionType,
           context,
           draftText,
+          draftTitle,
+          draftBody,
           tone: options.tone,
           length: options.length,
           customInstruction: options.customInstruction,
+          topic: options.topic,
+          karmaTier: options.karmaTier,
+          targetCommunity: context.subreddit,
         },
       },
       (response) => {
@@ -123,7 +140,7 @@
   function renderActionResponse(actionType, data) {
     let html = "";
 
-    // 1. Render Post Summary Banner at the top if available
+    // 1. Post Summary Banner (if available)
     if (data.postSummary || (actionType === "analyze_post" && data.summary)) {
       const summaryText = data.postSummary || data.summary;
       html += `
@@ -142,8 +159,193 @@
       `;
     }
 
-    // 2. Render Suggestions / Analysis
-    if (actionType === "suggest_replies" && data.replies) {
+    // 2. Phase 5: Karma-Aware Community Matcher Results
+    if (actionType === "match_communities" && data.recommendedCommunities) {
+      html += `
+        <div class="rc-summary-card">
+          <div class="rc-summary-header">
+            <span class="rc-summary-badge">🎯 Community Matcher</span>
+            <span class="rc-summary-topic">Karma & Account-Age Filtered</span>
+          </div>
+          <div class="rc-summary-body">${escapeHtml(data.topicAnalysis || "Eligible subreddits for your topic and account level.")}</div>
+        </div>
+      `;
+
+      data.recommendedCommunities.forEach((com) => {
+        const isLowKarma = com.tierCategory.includes("Low-Karma") || com.tierCategory.includes("🟢");
+        html += `
+          <div class="rc-card">
+            <div class="rc-card-header">
+              <a href="https://reddit.com/${escapeAttribute(com.name)}/submit" target="_blank" class="rc-community-link">
+                ${escapeHtml(com.name)} ↗
+              </a>
+              <span class="rc-risk-badge" style="background: ${
+                isLowKarma ? "rgba(46, 204, 113, 0.15)" : "rgba(52, 152, 219, 0.15)"
+              }; color: ${isLowKarma ? "#2ecc71" : "#3498db"};">
+                ${escapeHtml(com.tierCategory || "Target Niche")}
+              </span>
+            </div>
+            <div style="font-size: 12px; color: #d7dadc; line-height: 1.4;">${escapeHtml(com.whySuitable)}</div>
+            
+            <div class="rc-karma-alert">
+              <span class="rc-karma-alert-title">🛡️ Karma Assessment:</span>
+              <span>${escapeHtml(com.karmaEligibility || "Safe to post")}</span>
+            </div>
+
+            ${
+              com.postingTips
+                ? `
+              <div class="rc-why-bubble">
+                <span class="rc-why-label">Posting Rule Tip:</span>
+                ${escapeHtml(com.postingTips)}
+              </div>`
+                : ""
+            }
+          </div>
+        `;
+      });
+    }
+
+    // 3. Phase 5: Post Creator Results (Titles + Formatted Body)
+    else if (actionType === "create_post" && data.recommendedTitles) {
+      const bestTitle = data.recommendedTitles[0]?.title || "";
+      const bodyText = data.formattedBody || "";
+
+      html += `
+        <div class="rc-card" style="border-color: #ff4500;">
+          <div class="rc-card-header">
+            <span class="rc-card-tag" style="background: #ff4500; color: #ffffff;">🚀 Ready-to-Post Bundle</span>
+          </div>
+          <button type="button" class="rc-insert-full-post-btn" data-title="${escapeAttribute(bestTitle)}" data-body="${escapeAttribute(bodyText)}">
+            🚀 Insert Full Post into Reddit
+          </button>
+        </div>
+
+        <div class="rc-section-header" style="margin-top: 10px;">
+          <span class="rc-section-title">Selectable Title Hooks:</span>
+        </div>
+      `;
+
+      data.recommendedTitles.forEach((tObj, idx) => {
+        html += `
+          <div class="rc-card">
+            <div class="rc-card-header">
+              <span class="rc-card-tag">Title #${idx + 1} ${tObj.flair ? `• ${escapeHtml(tObj.flair)}` : ''}</span>
+            </div>
+            <div class="rc-card-text" style="font-weight: 600;">${escapeHtml(tObj.title)}</div>
+            ${tObj.angle ? `<div class="rc-why-bubble"><span class="rc-why-label">Why this hook:</span>${escapeHtml(tObj.angle)}</div>` : ''}
+            <div class="rc-card-actions">
+              <button type="button" class="rc-insert-title-btn" data-title="${escapeAttribute(tObj.title)}">
+                Insert Title
+              </button>
+              <button type="button" class="rc-copy-btn" data-text="${escapeAttribute(tObj.title)}">
+                Copy
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+        <div class="rc-section-header" style="margin-top: 10px;">
+          <span class="rc-section-title">Formatted Post Body:</span>
+        </div>
+        <div class="rc-card">
+          <div class="rc-card-text">${escapeHtml(data.formattedBody)}</div>
+          ${
+            data.ruleComplianceCheck
+              ? `<div class="rc-why-bubble"><span class="rc-why-label">Rule Alignment:</span>${escapeHtml(data.ruleComplianceCheck)}</div>`
+              : ""
+          }
+          <div class="rc-card-actions">
+            <button type="button" class="rc-insert-body-btn" data-body="${escapeAttribute(data.formattedBody)}">
+              Insert Post Body
+            </button>
+            <button type="button" class="rc-copy-btn" data-text="${escapeAttribute(data.formattedBody)}">
+              Copy Body
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // 4. Phase 5: 1-Click Rule Compliance Upgrader Results
+    else if (actionType === "upgrade_post_rules") {
+      const isCompliant = data.complianceStatus.includes("🟢") || data.complianceStatus.includes("Compliant");
+      html += `
+        <div class="rc-card">
+          <div class="rc-card-header">
+            <span class="rc-card-tag">🛡️ Subreddit Rule Compliance</span>
+            <span class="rc-risk-badge" style="background: ${
+              isCompliant ? "rgba(46, 204, 113, 0.15)" : "rgba(231, 76, 60, 0.15)"
+            }; color: ${isCompliant ? "#2ecc71" : "#e74c3c"};">
+              ${escapeHtml(data.complianceStatus || "Evaluated")}
+            </span>
+          </div>
+
+          ${
+            data.issuesFound && data.issuesFound.length > 0
+              ? `
+            <div class="rc-rule-issues-box">
+              <span class="rc-rule-issues-title">⚠️ Moderation Concerns Detected:</span>
+              <ul style="font-size: 11px; color: #ff8c66; padding-left: 16px; margin: 4px 0 0 0;">
+                ${data.issuesFound.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}
+              </ul>
+            </div>`
+              : `<p style="font-size: 12px; color: #2ecc71;">No strict rule conflicts detected for this subreddit!</p>`
+          }
+
+          <div style="font-size: 12px; color: #d7dadc; line-height: 1.4; margin-top: 4px;">
+            ${escapeHtml(data.upgradeExplanation || "")}
+          </div>
+        </div>
+
+        <div class="rc-card" style="border-color: #2ecc71;">
+          <div class="rc-card-header">
+            <span class="rc-card-tag" style="background: #2ecc71; color: #000000; font-weight: bold;">✨ 100% Compliant Upgraded Draft</span>
+          </div>
+          <div class="rc-card-text">
+            <strong>Title:</strong> ${escapeHtml(data.upgradedTitle || "")}
+            <hr style="border: 0; border-top: 1px solid #272729; margin: 8px 0;" />
+            <strong>Body:</strong>
+            <br />
+            ${escapeHtml(data.upgradedBody || "")}
+          </div>
+          <button type="button" class="rc-insert-full-post-btn" style="background: #2ecc71; color: #000000;" data-title="${escapeAttribute(data.upgradedTitle)}" data-body="${escapeAttribute(data.upgradedBody)}">
+            ✨ Apply Upgraded Compliant Post into Reddit
+          </button>
+        </div>
+      `;
+    }
+
+    // 5. Phase 5: Personalized Post Ideas Results
+    else if (actionType === "suggest_post_ideas" && data.ideas) {
+      html += `
+        <div class="rc-section-header">
+          <span class="rc-section-title">💡 Post Ideas for Your Profile:</span>
+        </div>
+      `;
+
+      data.ideas.forEach((idea, idx) => {
+        html += `
+          <div class="rc-card">
+            <div class="rc-card-header">
+              <span class="rc-card-tag">Idea #${idx + 1}</span>
+              <span class="rc-risk-badge" style="color: #3498db; background: rgba(52, 152, 219, 0.15);">${escapeHtml(idea.targetSubreddit || "r/all")}</span>
+            </div>
+            <div class="rc-card-text" style="font-weight: 600;">${escapeHtml(idea.topic)}</div>
+            <div style="font-size: 11px; color: #818384;"><strong>Format:</strong> ${escapeHtml(idea.format || "Discussion")}</div>
+            <div class="rc-why-bubble">
+              <span class="rc-why-label">Why it works:</span>
+              ${escapeHtml(idea.whyItWorks)}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // 6. Existing Suggest Replies Results
+    else if (actionType === "suggest_replies" && data.replies) {
       data.replies.forEach((reply, index) => {
         html += `
           <div class="rc-card">
@@ -173,7 +375,6 @@
               </button>
             </div>
 
-            <!-- Inline Card Refine Box -->
             <div class="rc-card-refine-box hidden">
               <input type="text" class="rc-card-refine-input" placeholder="e.g. 'Make it shorter', 'Add GitHub mention'..." />
               <button type="button" class="rc-apply-card-refine-btn" data-original-text="${escapeAttribute(reply.text)}">
