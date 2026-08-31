@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reddit AI Copilot Settings</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo">r/</div>
+        <div class="title-group">
+          <h1>Reddit Copilot</h1>
+          <span class="subtitle">AI Browser Assistant</span>
+        </div>
+      </div>
+      <span class="badge">v1.0.0</span>
+    </header>
+
+    <!-- Privacy & Local Storage Notice -->
+    <div class="info-banner">
+      <svg class="info-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      </svg>
+      <span>Your AI provider key is stored locally in this extension for personal use.</span>
+    </div>
+
+    <!-- Form Settings -->
+    <div class="form-group">
+      <label for="provider-select">AI Provider</label>
+      <select id="provider-select">
+        <option value="gemini">Google Gemini (Recommended)</option>
+        <option value="groq">Groq (Free Llama 3.3)</option>
+        <option value="openai">OpenAI (GPT-4o-mini)</option>
+        <option value="deepseek">DeepSeek (V3)</option>
+        <option value="ollama">Local Ollama</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="api-key-group">
+      <div class="label-row">
+        <label for="api-key-input">API Key</label>
+        <a id="get-key-link" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Get key &rarr;</a>
+      </div>
+      <div class="input-with-icon">
+        <input type="password" id="api-key-input" placeholder="Paste your API key here..." autocomplete="off" />
+        <button type="button" id="toggle-key-visibility" title="Show/Hide Key">
+          <svg id="eye-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="model-select">AI Model</label>
+      <select id="model-select">
+        <!-- Dynamically populated -->
+      </select>
+      <input type="text" id="custom-model-input" class="hidden" placeholder="Enter custom model name (e.g. gemini-3.5-flash)" style="margin-top: 6px;" />
+    </div>
+
+    <!-- Collapsible Advanced: Custom Endpoint -->
+    <div class="advanced-section">
+      <button type="button" id="toggle-advanced">
+        <span>Advanced Settings</span>
+        <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+      <div class="advanced-content hidden" id="advanced-content">
+        <div class="form-group">
+          <label for="endpoint-input">Custom API Endpoint (Optional)</label>
+          <input type="text" id="endpoint-input" placeholder="e.g. http://localhost:11434/api/generate" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Tone Preference -->
+    <div class="form-group">
+      <label>Default Response Tone</label>
+      <div class="radio-group">
+        <label class="radio-card">
+          <input type="radio" name="tone" value="helpful" checked />
+          <div class="radio-content">
+            <span class="radio-title">Helpful & Technical</span>
+            <span class="radio-desc">Clear, direct, solution-oriented</span>
+          </div>
+        </label>
+        <label class="radio-card">
+          <input type="radio" name="tone" value="conversational" />
+          <div class="radio-content">
+            <span class="radio-title">Conversational & Friendly</span>
+            <span class="radio-desc">Casual discussion and shared experience</span>
+          </div>
+        </label>
+        <label class="radio-card">
+          <input type="radio" name="tone" value="question" />
+          <div class="radio-content">
+            <span class="radio-title">Question & Engagement</span>
+            <span class="radio-desc">Thought-provoking discussion starter</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div id="status-message" class="status-message hidden"></div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button type="button" id="test-btn" class="btn btn-secondary">
+        <span>Test Connection</span>
+      </button>
+      <button type="button" id="save-btn" class="btn btn-primary">
+        <span>Save Settings</span>
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>Works alongside Reddit &bull; Explicit User Actions Only</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

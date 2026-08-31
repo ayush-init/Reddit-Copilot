@@ -1,0 +1,8 @@
+/**
+ * Reddit AI Copilot - Content Script Styles
+ */
+.reddit-copilot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
