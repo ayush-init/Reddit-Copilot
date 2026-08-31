@@ -59,11 +59,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
-      const { actionType, context, draftText } = payload;
+      const { actionType, context, draftText, tone, length, customInstruction, originalText, refineInstruction } = payload;
       let promptConfig = null;
 
+      const effectiveTone = tone || settings.tone || "helpful";
+      const effectivePersona = settings.persona || "";
+
       if (actionType === "suggest_replies") {
-        promptConfig = self.Prompts.getSuggestRepliesPrompt(context, settings.tone || "helpful", settings.persona || "");
+        promptConfig = self.Prompts.getSuggestRepliesPrompt(
+          context,
+          effectiveTone,
+          effectivePersona,
+          length || "standard",
+          customInstruction || ""
+        );
+      } else if (actionType === "refine_single_reply") {
+        promptConfig = self.Prompts.getRefineSingleReplyPrompt(
+          context,
+          originalText,
+          refineInstruction,
+          effectivePersona
+        );
       } else if (actionType === "analyze_post") {
         promptConfig = self.Prompts.getAnalyzePostPrompt(context);
       } else if (actionType === "draft_question") {

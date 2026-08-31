@@ -4,19 +4,20 @@
  */
 
 (function () {
-  console.log("%c[Reddit AI Copilot]%c Loaded & Active.", "color: #ff4500; font-weight: bold;", "color: #2ecc71;");
+  console.log("%c[Reddit AI Copilot]%c Loaded & Active (Phase 4).", "color: #ff4500; font-weight: bold;", "color: #2ecc71;");
 
-  // Initialize UI Injector with Action Handlers
+  // Initialize UI Injector with Action & Refine Handlers
   if (window.UIInjector) {
     window.UIInjector.init({
       onActionTriggered: handleCopilotAction,
+      onSingleReplyRefine: handleSingleReplyRefine,
     });
   }
 
   /**
    * Main controller for user-triggered Copilot actions.
    */
-  async function handleCopilotAction(actionType) {
+  async function handleCopilotAction(actionType, options = {}) {
     if (!window.ContextExtractor || !window.UIInjector) return;
 
     const context = window.ContextExtractor.collectCurrentContext();
@@ -40,15 +41,21 @@
       }
     }
 
-    // Set loading message
-    const actionMessages = {
-      suggest_replies: "Reading full post & tailoring 3 personalized replies...",
-      analyze_post: "Summarizing post premise, OP intent & guidelines...",
-      draft_question: "Crafting engaging discussion questions...",
-      preflight_check: "Checking draft against community rules...",
-    };
+    // Dynamic loading messages
+    let loadingMsg = "Analyzing with AI...";
+    if (actionType === "suggest_replies") {
+      const toneLabel = options.tone || "helpful";
+      const lengthLabel = options.length || "standard";
+      loadingMsg = `Generating ${lengthLabel} replies with ${toneLabel} tone...`;
+    } else if (actionType === "analyze_post") {
+      loadingMsg = "Summarizing post premise, OP intent & guidelines...";
+    } else if (actionType === "draft_question") {
+      loadingMsg = "Crafting engaging discussion questions...";
+    } else if (actionType === "preflight_check") {
+      loadingMsg = "Checking draft against community rules...";
+    }
 
-    window.UIInjector.setLoading(true, actionMessages[actionType] || "Analyzing with AI...");
+    window.UIInjector.setLoading(true, loadingMsg);
 
     // Send action request to background AI service
     chrome.runtime.sendMessage(
@@ -58,6 +65,9 @@
           actionType,
           context,
           draftText,
+          tone: options.tone,
+          length: options.length,
+          customInstruction: options.customInstruction,
         },
       },
       (response) => {
@@ -75,6 +85,34 @@
         }
 
         renderActionResponse(actionType, response.data);
+      }
+    );
+  }
+
+  /**
+   * Refines a specific single reply with AI without regenerating the entire list.
+   */
+  function handleSingleReplyRefine(originalText, refineInstruction, callback) {
+    if (!window.ContextExtractor) return;
+    const context = window.ContextExtractor.collectCurrentContext();
+
+    chrome.runtime.sendMessage(
+      {
+        action: "RUN_COPILOT_ACTION",
+        payload: {
+          actionType: "refine_single_reply",
+          context,
+          originalText,
+          refineInstruction,
+        },
+      },
+      (response) => {
+        if (response && response.success && response.data) {
+          callback(response.data);
+        } else {
+          alert("Refinement failed: " + (response?.error || "Unknown error"));
+          callback(null);
+        }
       }
     );
   }
@@ -127,8 +165,19 @@
               <button type="button" class="rc-insert-btn" data-text="${escapeAttribute(reply.text)}">
                 Insert into Comment
               </button>
+              <button type="button" class="rc-refine-toggle-btn" title="Refine this specific draft">
+                🔄 Refine
+              </button>
               <button type="button" class="rc-copy-btn" data-text="${escapeAttribute(reply.text)}">
                 Copy
+              </button>
+            </div>
+
+            <!-- Inline Card Refine Box -->
+            <div class="rc-card-refine-box hidden">
+              <input type="text" class="rc-card-refine-input" placeholder="e.g. 'Make it shorter', 'Add GitHub mention'..." />
+              <button type="button" class="rc-apply-card-refine-btn" data-original-text="${escapeAttribute(reply.text)}">
+                ✨ Apply
               </button>
             </div>
           </div>

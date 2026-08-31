@@ -362,6 +362,168 @@
   display: block !important;
 }
 
+/* Phase 4: Tone & Length Customizer Panel */
+.rc-customizer-panel {
+  background-color: #1a1a1b !important;
+  border: 1px solid #272729 !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.rc-customizer-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.rc-customizer-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #818384 !important;
+  min-width: 44px !important;
+}
+
+.rc-pill-group {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  flex: 1 1 auto !important;
+}
+
+.rc-pill {
+  all: unset !important;
+  box-sizing: border-box !important;
+  background-color: #0e1113 !important;
+  border: 1px solid #343536 !important;
+  color: #818384 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 4px 8px !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  user-select: none !important;
+}
+
+.rc-pill:hover {
+  border-color: #ff4500 !important;
+  color: #ffffff !important;
+}
+
+.rc-pill.active {
+  background-color: rgba(255, 69, 0, 0.18) !important;
+  border-color: #ff4500 !important;
+  color: #ff8c66 !important;
+  font-weight: 700 !important;
+}
+
+/* Custom Refine Prompt Box */
+.rc-refine-box {
+  display: flex !important;
+  gap: 6px !important;
+  margin-top: 4px !important;
+  width: 100% !important;
+}
+
+.rc-refine-box input {
+  all: unset !important;
+  box-sizing: border-box !important;
+  flex: 1 1 auto !important;
+  background-color: #0e1113 !important;
+  border: 1px solid #343536 !important;
+  border-radius: 6px !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  padding: 6px 10px !important;
+}
+
+.rc-refine-box input:focus {
+  border-color: #ff4500 !important;
+}
+
+.rc-refine-box button {
+  all: unset !important;
+  box-sizing: border-box !important;
+  background-color: #ff4500 !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+.rc-refine-box button:hover {
+  background-color: #e03d00 !important;
+}
+
+/* Card-level Refine Button & Box */
+.rc-refine-toggle-btn {
+  all: unset !important;
+  box-sizing: border-box !important;
+  background-color: rgba(52, 152, 219, 0.15) !important;
+  color: #3498db !important;
+  border: 1px solid rgba(52, 152, 219, 0.3) !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  text-align: center !important;
+}
+
+.rc-refine-toggle-btn:hover {
+  background-color: rgba(52, 152, 219, 0.3) !important;
+  color: #ffffff !important;
+}
+
+.rc-card-refine-box {
+  display: flex !important;
+  gap: 6px !important;
+  margin-top: 4px !important;
+  padding-top: 8px !important;
+  border-top: 1px dashed #272729 !important;
+  width: 100% !important;
+}
+
+.rc-card-refine-input {
+  all: unset !important;
+  box-sizing: border-box !important;
+  flex: 1 1 auto !important;
+  background-color: #0e1113 !important;
+  border: 1px solid #343536 !important;
+  border-radius: 4px !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  padding: 6px 8px !important;
+}
+
+.rc-card-refine-input:focus {
+  border-color: #3498db !important;
+}
+
+.rc-apply-card-refine-btn {
+  all: unset !important;
+  box-sizing: border-box !important;
+  background-color: #3498db !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 6px 10px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+}
+
+.rc-apply-card-refine-btn:hover {
+  background-color: #2980b9 !important;
+}
+
 /* 4. Results & States */
 .rc-results-container {
   flex: 1 1 auto !important;

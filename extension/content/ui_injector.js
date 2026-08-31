@@ -1,7 +1,7 @@
 /**
  * Reddit AI Copilot - UI Injector
- * Creates floating badge, collapsible side drawer, inline "⚡ AI Reply" buttons,
- * and auto-opening smart comment box inserter.
+ * Creates floating badge, collapsible side drawer with Tone & Length Controls,
+ * Interactive AI Refinement, and Auto-opening Smart Comment Inserter.
  */
 
 const UIInjector = {
@@ -9,6 +9,8 @@ const UIInjector = {
   badgeElement: null,
   isDrawerOpen: false,
   observerTimeout: null,
+  selectedTone: "helpful",
+  selectedLength: "standard",
 
   /**
    * Initializes and injects all UI components into the Reddit page.
@@ -139,6 +141,35 @@ const UIInjector = {
           </button>
         </div>
 
+        <!-- Phase 4: Tone & Length Customizer Bar -->
+        <div class="rc-customizer-panel">
+          <div class="rc-customizer-row">
+            <span class="rc-customizer-label">Tone:</span>
+            <div class="rc-pill-group" id="rc-tone-pills">
+              <button type="button" class="rc-pill active" data-tone="helpful">💡 Helpful</button>
+              <button type="button" class="rc-pill" data-tone="collaborative">🤝 Collab</button>
+              <button type="button" class="rc-pill" data-tone="pitch">⚡ Pitch</button>
+              <button type="button" class="rc-pill" data-tone="casual">☕ Casual</button>
+              <button type="button" class="rc-pill" data-tone="socratic">❓ Question</button>
+            </div>
+          </div>
+
+          <div class="rc-customizer-row">
+            <span class="rc-customizer-label">Length:</span>
+            <div class="rc-pill-group" id="rc-length-pills">
+              <button type="button" class="rc-pill" data-length="short">⚡ Short</button>
+              <button type="button" class="rc-pill active" data-length="standard">📄 Standard</button>
+              <button type="button" class="rc-pill" data-length="indepth">📚 In-Depth</button>
+            </div>
+          </div>
+
+          <!-- Interactive Custom Refinement Prompt Box -->
+          <div class="rc-refine-box">
+            <input type="text" id="rc-custom-refine-input" placeholder="Custom direction (e.g. 'Make it shorter', 'Add Python tips')..." />
+            <button type="button" id="rc-custom-refine-btn" title="Generate with custom prompt">✨ Apply</button>
+          </div>
+        </div>
+
         <!-- Dynamic Output Container -->
         <div class="rc-results-container" id="rc-results-container">
           <div class="rc-empty-state" id="rc-empty-state">
@@ -189,7 +220,7 @@ const UIInjector = {
           settings.persona = newPersona;
           chrome.storage.local.set({ settings }, () => {
             if (personaPreview) {
-              personaPreview.textContent = newPersona || "Personalized to your background & domain expertise.";
+              personaPreview.textContent = newPersona ? `"${newPersona.substring(0, 80)}..."` : "Personalized to your background & domain expertise.";
             }
             personaEditBox.classList.add("hidden");
             savePersonaBtn.textContent = "✓ Saved!";
@@ -201,11 +232,74 @@ const UIInjector = {
       });
     }
 
+    // Tone Pills Handler
+    drawer.querySelectorAll("#rc-tone-pills .rc-pill").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        drawer.querySelectorAll("#rc-tone-pills .rc-pill").forEach((p) => p.classList.remove("active"));
+        pill.classList.add("active");
+        this.selectedTone = pill.getAttribute("data-tone");
+        // Trigger auto re-generation with new tone
+        if (this.callbacks.onActionTriggered) {
+          const customPrompt = drawer.querySelector("#rc-custom-refine-input")?.value || "";
+          this.callbacks.onActionTriggered("suggest_replies", {
+            tone: this.selectedTone,
+            length: this.selectedLength,
+            customInstruction: customPrompt,
+          });
+        }
+      });
+    });
+
+    // Length Pills Handler
+    drawer.querySelectorAll("#rc-length-pills .rc-pill").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        drawer.querySelectorAll("#rc-length-pills .rc-pill").forEach((p) => p.classList.remove("active"));
+        pill.classList.add("active");
+        this.selectedLength = pill.getAttribute("data-length");
+        // Trigger auto re-generation with new length
+        if (this.callbacks.onActionTriggered) {
+          const customPrompt = drawer.querySelector("#rc-custom-refine-input")?.value || "";
+          this.callbacks.onActionTriggered("suggest_replies", {
+            tone: this.selectedTone,
+            length: this.selectedLength,
+            customInstruction: customPrompt,
+          });
+        }
+      });
+    });
+
+    // Custom Direction Refine Button
+    const refineBtn = drawer.querySelector("#rc-custom-refine-btn");
+    const refineInput = drawer.querySelector("#rc-custom-refine-input");
+    if (refineBtn && refineInput) {
+      refineBtn.addEventListener("click", () => {
+        const customPrompt = refineInput.value.trim();
+        if (this.callbacks.onActionTriggered) {
+          this.callbacks.onActionTriggered("suggest_replies", {
+            tone: this.selectedTone,
+            length: this.selectedLength,
+            customInstruction: customPrompt,
+          });
+        }
+      });
+      refineInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          refineBtn.click();
+        }
+      });
+    }
+
+    // Action Cards Handler
     drawer.querySelectorAll(".rc-action-card").forEach((btn) => {
       btn.addEventListener("click", () => {
         const action = btn.getAttribute("data-action");
         if (this.callbacks.onActionTriggered) {
-          this.callbacks.onActionTriggered(action);
+          const customPrompt = drawer.querySelector("#rc-custom-refine-input")?.value || "";
+          this.callbacks.onActionTriggered(action, {
+            tone: this.selectedTone,
+            length: this.selectedLength,
+            customInstruction: customPrompt,
+          });
         }
       });
     });
@@ -238,7 +332,10 @@ const UIInjector = {
         e.stopPropagation();
         this.openDrawer();
         if (this.callbacks.onActionTriggered) {
-          this.callbacks.onActionTriggered("suggest_replies");
+          this.callbacks.onActionTriggered("suggest_replies", {
+            tone: this.selectedTone,
+            length: this.selectedLength,
+          });
         }
       });
 
@@ -329,7 +426,7 @@ const UIInjector = {
   },
 
   /**
-   * Binds click handlers to "Insert into Comment" and "Copy Text" buttons.
+   * Binds click handlers to "Insert into Comment", "Copy", and "🔄 Refine this" buttons.
    */
   attachResultButtonEvents() {
     const resultsContent = document.getElementById("rc-results-content");
@@ -365,18 +462,63 @@ const UIInjector = {
         });
       });
     });
+
+    // Handle Card-level "🔄 Refine" Toggle
+    resultsContent.querySelectorAll(".rc-refine-toggle-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const card = btn.closest(".rc-card");
+        const miniBox = card.querySelector(".rc-card-refine-box");
+        if (miniBox) miniBox.classList.toggle("hidden");
+      });
+    });
+
+    // Handle Card-level Single Reply AI Refinement
+    resultsContent.querySelectorAll(".rc-apply-card-refine-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const card = btn.closest(".rc-card");
+        const input = card.querySelector(".rc-card-refine-input");
+        const instruction = input ? input.value.trim() : "";
+        const originalText = btn.getAttribute("data-original-text");
+
+        if (!instruction) return;
+        btn.textContent = "Refining...";
+
+        if (this.callbacks.onSingleReplyRefine) {
+          this.callbacks.onSingleReplyRefine(originalText, instruction, (refinedData) => {
+            if (refinedData && refinedData.refinedText) {
+              const textEl = card.querySelector(".rc-card-text");
+              if (textEl) textEl.textContent = refinedData.refinedText;
+
+              // Update data-text attributes on buttons
+              const insertBtn = card.querySelector(".rc-insert-btn");
+              const copyBtn = card.querySelector(".rc-copy-btn");
+              if (insertBtn) insertBtn.setAttribute("data-text", refinedData.refinedText);
+              if (copyBtn) copyBtn.setAttribute("data-text", refinedData.refinedText);
+              btn.setAttribute("data-original-text", refinedData.refinedText);
+
+              const whyEl = card.querySelector(".rc-why-bubble");
+              if (whyEl && refinedData.why) {
+                whyEl.innerHTML = `<span class="rc-why-label">Refinement Rationale:</span> ${refinedData.why}`;
+              }
+
+              const miniBox = card.querySelector(".rc-card-refine-box");
+              if (miniBox) miniBox.classList.add("hidden");
+            }
+            btn.textContent = "✨ Apply";
+          });
+        }
+      });
+    });
   },
 
   /**
    * Smart comment box locator, auto-expander, and text inserter.
    */
   smartInsertIntoCommentBox(text, callback) {
-    // 1. Copy to clipboard immediately as a reliable backup
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch(() => {});
     }
 
-    // 2. Check if editor is already open and active
     let editor = window.ContextExtractor ? window.ContextExtractor.findActiveCommentBox() : null;
 
     if (editor) {
@@ -385,7 +527,6 @@ const UIInjector = {
       return;
     }
 
-    // 3. If closed/collapsed, find and click Reddit's comment composer trigger
     const triggerSelectors = [
       "shreddit-comment-composer",
       "faceplate-textarea-input",
@@ -408,23 +549,19 @@ const UIInjector = {
       trigger.scrollIntoView({ behavior: "smooth", block: "center" });
       trigger.click();
       
-      // Also try focusing child inputs
       const childInput = trigger.querySelector("textarea, [contenteditable='true'], input");
       if (childInput) childInput.focus();
 
-      // Wait 250ms for Reddit to mount/expand the editor
       setTimeout(() => {
         const newEditor = window.ContextExtractor ? window.ContextExtractor.findActiveCommentBox() : null;
         if (newEditor) {
           this.writeTextToEditor(newEditor, text);
           if (callback) callback(true);
         } else {
-          // If Reddit editor couldn't be auto-expanded, notify user that text is copied
           if (callback) callback(false);
         }
       }, 300);
     } else {
-      // Final fallback: copy text
       if (callback) callback(false);
     }
   },

@@ -152,15 +152,17 @@ reddit-copilot/
 
 ---
 
-### ⏳ Phase 4: Enhanced Multi-Perspective Reply Customization — `[READY / NEXT]`
-- **Scope**:
-  - Tone switcher directly inside the Action Drawer (Helpful, Technical, Socratic, Conversational).
-  - Custom reply length controls (Brief, Standard, Comprehensive).
-  - One-click regeneration with custom refinement prompt (e.g. *"Make it shorter"*, *"Add code example"*).
+### ✅ Phase 4: Enhanced Multi-Perspective Reply Customization & Interactive Refinement — `[COMPLETED]`
+- **Status**: Completed & Verified.
+- **Accomplishments**:
+  - **Live Tone Switcher in Drawer**: 💡 *Helpful*, 🤝 *Collab*, ⚡ *Pitch*, ☕ *Casual*, ❓ *Question* pills with instant re-generation.
+  - **Length Controls**: ⚡ *Short (1-2 lines)*, 📄 *Standard*, 📚 *In-Depth* pills.
+  - **Interactive Global Refine Box**: Input custom instructions (*"Make it shorter"*, *"Add Python tips"*) with instant AI apply.
+  - **Card-Level Single Reply Refinement**: 🔄 *Refine* button on each generated reply card with inline AI prompt and single-card update.
 
 ---
 
-### ⏳ Phase 5: Community Rule & Self-Promotion Preflight Engine — `[PLANNED]`
+### ⏳ Phase 5: Community Rule & Self-Promotion Preflight Engine — `[READY / NEXT]`
 - **Scope**:
   - Deep rule-matching matrix comparing proposed drafts against visible subreddit rules.
   - Nuanced risk signals: *"Potential self-promotion concern"*, *"Potential rule conflict"*, *"Clear to post"*.
