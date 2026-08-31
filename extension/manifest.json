@@ -38,6 +38,7 @@
       ],
       "js": [
         "content/context_extractor.js",
+        "content/ui_injector.js",
         "content/content.js"
       ],
       "css": [

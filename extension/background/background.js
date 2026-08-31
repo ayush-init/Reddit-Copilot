@@ -2,14 +2,14 @@
  * Background Service Worker for Reddit AI Copilot
  */
 
-importScripts("ai_service.js");
+importScripts("ai_service.js", "prompts.js");
 
 // Default configuration settings
 const DEFAULT_SETTINGS = {
   provider: "gemini",
   apiKey: "",
-  model: "gemini-1.5-flash",
-  tone: "helpful", // helpful | conversational | question
+  model: "gemini-3.7-flash",
+  tone: "helpful",
   customEndpoint: "",
 };
 
@@ -31,7 +31,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     self.AI_SERVICE.testConnection(provider, apiKey, model, customEndpoint)
       .then((res) => sendResponse(res))
       .catch((err) => sendResponse({ success: false, error: err.message }));
-    return true; // Keep channel open for async response
+    return true;
   }
 
   if (action === "GET_CONFIG") {
@@ -48,14 +48,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (action === "GENERATE_AI") {
+  if (action === "RUN_COPILOT_ACTION") {
     chrome.storage.local.get("settings").then(async (res) => {
       const settings = res.settings || DEFAULT_SETTINGS;
       if (!settings.apiKey && settings.provider !== "ollama") {
         sendResponse({
           success: false,
-          error: "API Key not configured. Please open Reddit Copilot extension settings to add your key.",
+          error: "API Key not configured. Please click the extension icon to set your API key first.",
         });
+        return;
+      }
+
+      const { actionType, context, draftText } = payload;
+      let promptConfig = null;
+
+      if (actionType === "suggest_replies") {
+        promptConfig = self.Prompts.getSuggestRepliesPrompt(context, settings.tone || "helpful");
+      } else if (actionType === "analyze_post") {
+        promptConfig = self.Prompts.getAnalyzePostPrompt(context);
+      } else if (actionType === "draft_question") {
+        promptConfig = self.Prompts.getDraftQuestionPrompt(context);
+      } else if (actionType === "preflight_check") {
+        promptConfig = self.Prompts.getPreflightCheckPrompt(context, draftText);
+      } else {
+        sendResponse({ success: false, error: `Unknown action: ${actionType}` });
         return;
       }
 
@@ -64,11 +80,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           settings.provider,
           settings.apiKey,
           settings.model,
-          payload.systemPrompt,
-          payload.userPrompt,
+          promptConfig.systemPrompt,
+          promptConfig.userPrompt,
           settings.customEndpoint
         );
-        sendResponse({ success: true, data: result });
+        sendResponse({ success: true, data: result, actionType });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
       }

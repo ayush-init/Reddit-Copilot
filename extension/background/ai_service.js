@@ -46,6 +46,24 @@ const PROVIDER_CONFIGS = {
   },
 };
 
+function safeJsonParse(text) {
+  if (!text) return {};
+  const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (err2) {
+        // Fallback
+      }
+    }
+    throw new Error("Unable to parse AI response as JSON: " + text.substring(0, 100));
+  }
+}
+
 /**
  * Queries Google AI Studio directly to list all valid models for the user's API key.
  */
@@ -209,7 +227,7 @@ async function generateAIResponse(provider, apiKey, model, systemPrompt, userPro
 
     const data = await res.json();
     const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-    return JSON.parse(rawText);
+    return safeJsonParse(rawText);
   }
 
   if (provider === "groq" || provider === "openai" || provider === "deepseek") {
