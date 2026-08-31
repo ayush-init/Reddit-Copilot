@@ -63,7 +63,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       let promptConfig = null;
 
       if (actionType === "suggest_replies") {
-        promptConfig = self.Prompts.getSuggestRepliesPrompt(context, settings.tone || "helpful");
+        promptConfig = self.Prompts.getSuggestRepliesPrompt(context, settings.tone || "helpful", settings.persona || "");
       } else if (actionType === "analyze_post") {
         promptConfig = self.Prompts.getAnalyzePostPrompt(context);
       } else if (actionType === "draft_question") {

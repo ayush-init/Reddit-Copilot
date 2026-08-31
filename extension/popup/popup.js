@@ -80,6 +80,7 @@ const toggleKeyBtn = document.getElementById("toggle-key-visibility");
 const toggleAdvancedBtn = document.getElementById("toggle-advanced");
 const advancedContent = document.getElementById("advanced-content");
 const endpointInput = document.getElementById("endpoint-input");
+const personaInput = document.getElementById("user-persona-input");
 const statusMessage = document.getElementById("status-message");
 const testBtn = document.getElementById("test-btn");
 const saveBtn = document.getElementById("save-btn");
@@ -141,6 +142,7 @@ function loadSettings() {
         provider: "gemini",
         apiKey: "",
         model: "gemini-3.7-flash",
+        persona: "",
         tone: "helpful",
         customEndpoint: "",
       };
@@ -148,6 +150,7 @@ function loadSettings() {
       if (providerSelect) providerSelect.value = settings.provider || "gemini";
       if (apiKeyInput) apiKeyInput.value = settings.apiKey || "";
       if (endpointInput) endpointInput.value = settings.customEndpoint || "";
+      if (personaInput) personaInput.value = settings.persona || "";
       
       updateProviderFields(settings.provider || "gemini", settings.model);
 
@@ -177,6 +180,7 @@ function getFormSettings() {
     provider: providerSelect ? providerSelect.value : "gemini",
     apiKey: apiKeyInput ? apiKeyInput.value.trim() : "",
     model: effectiveModel,
+    persona: personaInput ? personaInput.value.trim() : "",
     tone: selectedTone,
     customEndpoint: endpointInput ? endpointInput.value.trim() : "",
   };

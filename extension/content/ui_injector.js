@@ -1,7 +1,7 @@
 /**
  * Reddit AI Copilot - UI Injector
- * Creates floating badge, collapsible side drawer, and inline "⚡ AI Reply" buttons.
- * Purely user-triggered, high-performance, non-blocking DOM integration.
+ * Creates floating badge, collapsible side drawer, inline "⚡ AI Reply" buttons,
+ * and auto-opening smart comment box inserter.
  */
 
 const UIInjector = {
@@ -19,9 +19,8 @@ const UIInjector = {
     this.injectDrawer();
     this.injectInlineCommentButtons();
 
-    // Debounced observer to prevent any mutation loops (max 1 run per 1000ms)
+    // Debounced observer to prevent mutation loops
     const observer = new MutationObserver((mutations) => {
-      // Ignore mutations originating from our own elements
       const isOurMutation = mutations.every((m) => {
         const t = m.target;
         return (
@@ -88,6 +87,19 @@ const UIInjector = {
       </div>
 
       <div class="rc-drawer-body">
+        <!-- Persona Quick Status Banner -->
+        <div class="rc-persona-banner" id="rc-persona-banner">
+          <div class="rc-persona-header">
+            <span class="rc-persona-label">👤 My Active Persona</span>
+            <button type="button" class="rc-persona-edit-toggle" id="rc-persona-toggle">Edit Persona</button>
+          </div>
+          <div class="rc-persona-text" id="rc-persona-preview">Personalized to your background & domain expertise.</div>
+          <div class="rc-persona-edit-box hidden" id="rc-persona-edit-box">
+            <textarea id="rc-drawer-persona-input" rows="2" placeholder="e.g. Full Stack & AI Engineer, 5+ yrs in SaaS, React/Python..."></textarea>
+            <button type="button" id="rc-save-drawer-persona" class="rc-save-persona-btn">Save Persona</button>
+          </div>
+        </div>
+
         <!-- Intent Prompt Section -->
         <div class="rc-section-header">
           <span class="rc-section-title">What do you want to do?</span>
@@ -98,15 +110,15 @@ const UIInjector = {
             <div class="rc-action-icon">💡</div>
             <div class="rc-action-info">
               <span class="rc-action-label">Suggest 3 Replies</span>
-              <span class="rc-action-sub">Contextual, helpful & reasoned</span>
+              <span class="rc-action-sub">Personalized to your persona</span>
             </div>
           </button>
 
           <button type="button" class="rc-action-card" data-action="analyze_post">
             <div class="rc-action-icon">🔍</div>
             <div class="rc-action-info">
-              <span class="rc-action-label">Analyze Post & Rules</span>
-              <span class="rc-action-sub">Community tone & moderation check</span>
+              <span class="rc-action-label">Summarize & Analyze</span>
+              <span class="rc-action-sub">Post core intent & guidelines</span>
             </div>
           </button>
 
@@ -156,6 +168,39 @@ const UIInjector = {
       this.closeDrawer();
     });
 
+    // Persona Quick Editor in Drawer
+    const personaToggle = drawer.querySelector("#rc-persona-toggle");
+    const personaEditBox = drawer.querySelector("#rc-persona-edit-box");
+    const drawerPersonaInput = drawer.querySelector("#rc-drawer-persona-input");
+    const savePersonaBtn = drawer.querySelector("#rc-save-drawer-persona");
+    const personaPreview = drawer.querySelector("#rc-persona-preview");
+
+    if (personaToggle && personaEditBox) {
+      personaToggle.addEventListener("click", () => {
+        personaEditBox.classList.toggle("hidden");
+      });
+    }
+
+    if (savePersonaBtn && drawerPersonaInput) {
+      savePersonaBtn.addEventListener("click", () => {
+        const newPersona = drawerPersonaInput.value.trim();
+        chrome.storage.local.get("settings", (res) => {
+          const settings = res.settings || {};
+          settings.persona = newPersona;
+          chrome.storage.local.set({ settings }, () => {
+            if (personaPreview) {
+              personaPreview.textContent = newPersona || "Personalized to your background & domain expertise.";
+            }
+            personaEditBox.classList.add("hidden");
+            savePersonaBtn.textContent = "✓ Saved!";
+            setTimeout(() => {
+              savePersonaBtn.textContent = "Save Persona";
+            }, 1500);
+          });
+        });
+      });
+    }
+
     drawer.querySelectorAll(".rc-action-card").forEach((btn) => {
       btn.addEventListener("click", () => {
         const action = btn.getAttribute("data-action");
@@ -170,13 +215,11 @@ const UIInjector = {
    * Injects inline "⚡ AI Reply" button next to Reddit comment inputs safely.
    */
   injectInlineCommentButtons() {
-    // Find comment composer containers
     const composerContainers = document.querySelectorAll(
       "shreddit-composer, div[data-testid='comment-submission-form-rich-text'], div[data-testid='post-composer']"
     );
 
     composerContainers.forEach((container) => {
-      // Prevent duplicate injection
       if (container.dataset.rcInjected === "true") return;
       if (container.querySelector(".rc-inline-reply-btn") || container.parentElement?.querySelector(".rc-inline-reply-btn")) {
         container.dataset.rcInjected = "true";
@@ -199,7 +242,6 @@ const UIInjector = {
         }
       });
 
-      // Safely append to the composer's actions slot or container
       const targetArea = container.querySelector("div[slot='actions']") || container;
       targetArea.appendChild(inlineBtn);
     });
@@ -222,7 +264,19 @@ const UIInjector = {
     this.drawerElement.classList.add("rc-drawer-open");
     this.isDrawerOpen = true;
 
-    // Update subreddit badge in drawer
+    // Load active persona into drawer preview
+    chrome.storage.local.get("settings", (res) => {
+      const settings = res.settings || {};
+      const preview = document.getElementById("rc-persona-preview");
+      const drawerInput = document.getElementById("rc-drawer-persona-input");
+      if (settings.persona) {
+        if (preview) preview.textContent = `"${settings.persona.substring(0, 80)}${settings.persona.length > 80 ? '...' : ''}"`;
+        if (drawerInput) drawerInput.value = settings.persona;
+      } else {
+        if (preview) preview.textContent = "No personal bio set. Click 'Edit Persona' to customize.";
+      }
+    });
+
     if (window.ContextExtractor) {
       const sub = window.ContextExtractor.extractSubredditName();
       const subEl = document.getElementById("rc-current-subreddit");
@@ -281,15 +335,21 @@ const UIInjector = {
     const resultsContent = document.getElementById("rc-results-content");
     if (!resultsContent) return;
 
-    // Handle "Insert into Comment"
+    // Handle "Insert into Comment" with Smart Auto-Open
     resultsContent.querySelectorAll(".rc-insert-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const text = btn.getAttribute("data-text");
-        this.insertTextIntoCommentBox(text);
-        btn.textContent = "✓ Inserted!";
-        setTimeout(() => {
-          btn.textContent = "Insert into Comment";
-        }, 2000);
+        btn.textContent = "Opening & Inserting...";
+        this.smartInsertIntoCommentBox(text, (success) => {
+          if (success) {
+            btn.textContent = "✓ Inserted in Box!";
+          } else {
+            btn.textContent = "✓ Copied to Clipboard!";
+          }
+          setTimeout(() => {
+            btn.textContent = "Insert into Comment";
+          }, 2500);
+        });
       });
     });
 
@@ -308,29 +368,81 @@ const UIInjector = {
   },
 
   /**
-   * Safely inserts text into Reddit's active editor (Human-in-the-Loop, zero auto-submit).
+   * Smart comment box locator, auto-expander, and text inserter.
    */
-  insertTextIntoCommentBox(text) {
-    if (!window.ContextExtractor) return;
-    const editor = window.ContextExtractor.findActiveCommentBox();
+  smartInsertIntoCommentBox(text, callback) {
+    // 1. Copy to clipboard immediately as a reliable backup
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
 
-    if (!editor) {
-      alert("Please click inside Reddit's comment box first, then click 'Insert into Comment'.");
+    // 2. Check if editor is already open and active
+    let editor = window.ContextExtractor ? window.ContextExtractor.findActiveCommentBox() : null;
+
+    if (editor) {
+      this.writeTextToEditor(editor, text);
+      if (callback) callback(true);
       return;
     }
 
+    // 3. If closed/collapsed, find and click Reddit's comment composer trigger
+    const triggerSelectors = [
+      "shreddit-comment-composer",
+      "faceplate-textarea-input",
+      "div[data-testid='comment-submission-form-rich-text']",
+      "div[slot='composer']",
+      "div[placeholder*='Add a comment']",
+      "div[placeholder*='Join the conversation']",
+      "button[data-testid='comment-button']",
+      "button:has([data-icon='comment'])",
+      "div[data-click-id='comments']",
+    ];
+
+    let trigger = null;
+    for (const sel of triggerSelectors) {
+      trigger = document.querySelector(sel);
+      if (trigger) break;
+    }
+
+    if (trigger) {
+      trigger.scrollIntoView({ behavior: "smooth", block: "center" });
+      trigger.click();
+      
+      // Also try focusing child inputs
+      const childInput = trigger.querySelector("textarea, [contenteditable='true'], input");
+      if (childInput) childInput.focus();
+
+      // Wait 250ms for Reddit to mount/expand the editor
+      setTimeout(() => {
+        const newEditor = window.ContextExtractor ? window.ContextExtractor.findActiveCommentBox() : null;
+        if (newEditor) {
+          this.writeTextToEditor(newEditor, text);
+          if (callback) callback(true);
+        } else {
+          // If Reddit editor couldn't be auto-expanded, notify user that text is copied
+          if (callback) callback(false);
+        }
+      }, 300);
+    } else {
+      // Final fallback: copy text
+      if (callback) callback(false);
+    }
+  },
+
+  /**
+   * Writes text into a textarea or rich-text contenteditable element.
+   */
+  writeTextToEditor(editor, text) {
+    editor.scrollIntoView({ behavior: "smooth", block: "center" });
     editor.focus();
 
     if (editor.isContentEditable || editor.getAttribute("contenteditable") === "true") {
-      // Rich text contenteditable insertion
+      document.execCommand("selectAll", false, null);
       document.execCommand("insertText", false, text);
     } else {
-      // Standard textarea insertion
-      const start = editor.selectionStart || 0;
-      const end = editor.selectionEnd || 0;
-      const val = editor.value || "";
-      editor.value = val.substring(0, start) + text + val.substring(end);
+      editor.value = text;
       editor.dispatchEvent(new Event("input", { bubbles: true }));
+      editor.dispatchEvent(new Event("change", { bubbles: true }));
     }
   },
 };

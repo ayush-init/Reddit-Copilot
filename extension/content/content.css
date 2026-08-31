@@ -157,6 +157,134 @@
   gap: 16px !important;
 }
 
+/* Persona Banner */
+.rc-persona-banner {
+  background-color: #1a1a1b !important;
+  border: 1px solid #272729 !important;
+  border-left: 3px solid #ff4500 !important;
+  border-radius: 6px !important;
+  padding: 10px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+
+.rc-persona-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.rc-persona-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #ff8c66 !important;
+  letter-spacing: 0.3px !important;
+}
+
+.rc-persona-edit-toggle {
+  all: unset !important;
+  font-size: 10px !important;
+  color: #818384 !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+}
+
+.rc-persona-edit-toggle:hover {
+  color: #ffffff !important;
+}
+
+.rc-persona-text {
+  font-size: 11px !important;
+  color: #d7dadc !important;
+  line-height: 1.35 !important;
+  font-style: italic !important;
+}
+
+.rc-persona-edit-box {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  margin-top: 4px !important;
+  width: 100% !important;
+}
+
+.rc-persona-edit-box textarea {
+  all: unset !important;
+  box-sizing: border-box !important;
+  background-color: #0e1113 !important;
+  border: 1px solid #343536 !important;
+  border-radius: 4px !important;
+  color: #ffffff !important;
+  padding: 6px 8px !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+  width: 100% !important;
+}
+
+.rc-save-persona-btn {
+  all: unset !important;
+  box-sizing: border-box !important;
+  align-self: flex-end !important;
+  background-color: #ff4500 !important;
+  color: #ffffff !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 4px 10px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+}
+
+/* Post Summary Card */
+.rc-summary-card {
+  background-color: #161a1d !important;
+  border: 1px solid rgba(52, 152, 219, 0.3) !important;
+  border-left: 3px solid #3498db !important;
+  border-radius: 8px !important;
+  padding: 12px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+
+.rc-summary-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+}
+
+.rc-summary-badge {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #3498db !important;
+}
+
+.rc-summary-topic {
+  font-size: 10px !important;
+  color: #818384 !important;
+  font-style: italic !important;
+}
+
+.rc-summary-body {
+  font-size: 12px !important;
+  color: #ffffff !important;
+  line-height: 1.45 !important;
+}
+
+.rc-summary-sub {
+  font-size: 11px !important;
+  color: #a0c4e2 !important;
+  background-color: rgba(52, 152, 219, 0.08) !important;
+  padding: 6px 8px !important;
+  border-radius: 4px !important;
+  line-height: 1.35 !important;
+  margin-top: 2px !important;
+}
+
 .rc-section-header {
   margin-bottom: 2px !important;
 }

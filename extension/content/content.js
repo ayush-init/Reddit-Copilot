@@ -42,8 +42,8 @@
 
     // Set loading message
     const actionMessages = {
-      suggest_replies: "Drafting 3 smart reply angles with reasoning...",
-      analyze_post: "Analyzing post context & community rules...",
+      suggest_replies: "Reading full post & tailoring 3 personalized replies...",
+      analyze_post: "Summarizing post premise, OP intent & guidelines...",
       draft_question: "Crafting engaging discussion questions...",
       preflight_check: "Checking draft against community rules...",
     };
@@ -85,12 +85,32 @@
   function renderActionResponse(actionType, data) {
     let html = "";
 
+    // 1. Render Post Summary Banner at the top if available
+    if (data.postSummary || (actionType === "analyze_post" && data.summary)) {
+      const summaryText = data.postSummary || data.summary;
+      html += `
+        <div class="rc-summary-card">
+          <div class="rc-summary-header">
+            <span class="rc-summary-badge">📌 Post Overview</span>
+            <span class="rc-summary-topic">What this post is about</span>
+          </div>
+          <div class="rc-summary-body">${escapeHtml(summaryText)}</div>
+          ${
+            data.whatOPIsLookingFor
+              ? `<div class="rc-summary-sub"><strong>🎯 OP Wants:</strong> ${escapeHtml(data.whatOPIsLookingFor)}</div>`
+              : ""
+          }
+        </div>
+      `;
+    }
+
+    // 2. Render Suggestions / Analysis
     if (actionType === "suggest_replies" && data.replies) {
       data.replies.forEach((reply, index) => {
         html += `
           <div class="rc-card">
             <div class="rc-card-header">
-              <span class="rc-card-tag">#${index + 1} ${escapeHtml(reply.label || "Suggested Reply")}</span>
+              <span class="rc-card-tag">#${index + 1} ${escapeHtml(reply.label || "Personalized Reply")}</span>
               <span class="rc-risk-badge">${escapeHtml(reply.moderationRisk || "Low Risk")}</span>
             </div>
             <div class="rc-card-text">${escapeHtml(reply.text)}</div>
@@ -115,22 +135,21 @@
         `;
       });
     } else if (actionType === "analyze_post") {
-      html = `
+      html += `
         <div class="rc-card">
           <div class="rc-card-header">
-            <span class="rc-card-tag">🔍 Discussion Summary</span>
+            <span class="rc-card-tag">🔍 Community Tone & Vibe</span>
             <span class="rc-risk-badge" style="background: rgba(52, 152, 219, 0.15); color: #3498db;">
               ${escapeHtml(data.communityTone || "General")}
             </span>
           </div>
-          <p style="font-size: 13px; color: #ffffff; line-height: 1.4;">${escapeHtml(data.summary || "")}</p>
         </div>
 
         ${
           data.keyTakeaways && data.keyTakeaways.length > 0
             ? `
           <div class="rc-card">
-            <span class="rc-card-tag">💡 Key Discussion Points</span>
+            <span class="rc-card-tag">💡 Key Takeaways</span>
             <ul style="font-size: 12px; color: #d7dadc; padding-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
               ${data.keyTakeaways.map((k) => `<li>${escapeHtml(k)}</li>`).join("")}
             </ul>
@@ -142,7 +161,7 @@
           data.moderationNotes && data.moderationNotes.length > 0
             ? `
           <div class="rc-card">
-            <span class="rc-card-tag" style="color: #2ecc71; background: rgba(46,204,113,0.1);">🛡️ Community Guidelines & Tips</span>
+            <span class="rc-card-tag" style="color: #2ecc71; background: rgba(46,204,113,0.1);">🛡️ Community Guidelines & Advice</span>
             <ul style="font-size: 12px; color: #d7dadc; padding-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
               ${data.moderationNotes.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}
             </ul>
@@ -180,7 +199,7 @@
       });
     } else if (actionType === "preflight_check") {
       const isGood = data.status === "Looks Good";
-      html = `
+      html += `
         <div class="rc-card">
           <div class="rc-card-header">
             <span class="rc-card-tag">🛡️ Preflight Assessment</span>

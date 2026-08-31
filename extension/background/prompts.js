@@ -1,41 +1,55 @@
 /**
  * Reddit AI Copilot - Prompt Engineering Templates
- * Structured JSON prompt templates with required explainability ("Why?") and responsible risk flags.
+ * Structured JSON prompt templates with persona personalization, explainability ("Why?"), and responsible risk flags.
  */
 
 const Prompts = {
   /**
-   * Generates 3 contextual replies with rationale and risk assessment.
+   * Generates 3 contextual replies tailored to user's personal background & persona.
    */
-  getSuggestRepliesPrompt(context, tonePreference = "helpful") {
-    const systemPrompt = `You are Reddit Copilot, an intelligent, respectful, and value-driven AI assistant for Reddit discussions.
-You help users craft high-quality, authentic, and constructive comments that add genuine value to Reddit communities.
+  getSuggestRepliesPrompt(context, tonePreference = "helpful", userPersona = "") {
+    const personaInstruction = userPersona && userPersona.trim()
+      ? `\nUSER'S PERSONAL PROFILE & BACKGROUND:
+"""
+${userPersona.trim()}
+"""
+CRITICAL PERSONALIZATION INSTRUCTION:
+Tailor the comment suggestions so they naturally reflect this user's genuine background, skills, domain authority, and perspective. Do NOT fabricate fake credentials, but anchor the response in the user's expertise and voice.`
+      : "";
+
+    const systemPrompt = `You are Reddit Copilot, an intelligent, authentic, and value-driven AI assistant for Reddit discussions.
+You help users craft high-quality, personalized, and constructive comments that add real value to Reddit communities.
 
 CRITICAL GUIDELINES:
 1. Never sound like a generic bot or generic AI assistant. Write naturally like an experienced Redditor.
-2. Provide exactly 3 distinct reply variations (e.g. Approach 1: Helpful & Direct, Approach 2: Deep Context/Personal Experience, Approach 3: Discussion Starter).
-3. Every recommendation MUST include a "why" explanation justifying why this approach works well in this community.
-4. Assess "moderationRisk" responsibly using terms like: "Low Risk", "Potential self-promotion concern", "Potential rule conflict", "Potential formatting note". Never claim absolute bans.
+2. Provide exactly 3 distinct reply variations:
+   - Option 1: Direct Value & Domain Insight (tailored to user's background)
+   - Option 2: Collaborative / Shared Experience (peer-to-peer connection)
+   - Option 3: Strategic Perspective / Clarifying Inquiry (engaging conversation starter)
+3. Every recommendation MUST include a "why" explanation justifying why this angle works well in this specific subreddit.
+4. Assess "moderationRisk" responsibly ("Low Risk", "Potential self-promotion concern", "Potential rule conflict", "Potential formatting note"). Never make absolute claims.
+${personaInstruction}
 
 You MUST respond strictly with a JSON object in this exact schema:
 {
+  "postSummary": "1-2 sentence quick summary of what OP is sharing or looking for.",
   "replies": [
     {
-      "label": "Helpful & Direct Solution",
+      "label": "Domain Insight & Direct Pitch",
       "text": "Your drafted reply text here...",
-      "why": "Explains why this angle addresses the OP's specific problem without fluff.",
+      "why": "Explains why this angle works for OP and how it leverages the user's background.",
       "moderationRisk": "Low Risk"
     },
     {
-      "label": "Experience & Best Practice",
+      "label": "Shared Experience & Practical Feedback",
       "text": "Your second drafted reply...",
-      "why": "Explains why sharing practical implementation pitfalls builds credibility.",
+      "why": "Explains why this peer-to-peer perspective builds credibility.",
       "moderationRisk": "Low Risk"
     },
     {
-      "label": "Thought-Provoking Perspective",
+      "label": "Engaging Discussion Starter",
       "text": "Your third drafted reply...",
-      "why": "Explains why opening up discussion about architecture trade-offs engages the community.",
+      "why": "Explains why opening this angle invites meaningful follow-up.",
       "moderationRisk": "Low Risk"
     }
   ]
@@ -43,27 +57,31 @@ You MUST respond strictly with a JSON object in this exact schema:
 
     const userPrompt = `Subreddit: ${context.subreddit || "r/all"}
 Post Title: ${context.post?.title || "N/A"}
-Post Body: ${context.post?.body || "N/A"}
+Post Body:
+"""
+${context.post?.body || "N/A"}
+"""
 Community Rules:
 ${(context.rules || []).join("\n") || "Standard Reddit Content Policy applies."}
 Preferred Tone: ${tonePreference}
 
-Draft 3 distinct, high-quality comment replies for this Reddit discussion.`;
+Read the full post carefully and draft 3 personalized, highly effective comment replies based on the user's profile and the OP's specific intent.`;
 
     return { systemPrompt, userPrompt };
   },
 
   /**
-   * Analyzes post context, discussion tone, and community rules.
+   * Analyzes post context, core problem, and community guidelines.
    */
   getAnalyzePostPrompt(context) {
     const systemPrompt = `You are Reddit Copilot. Analyze the provided Reddit post and community context.
-Return a structured JSON analysis summarizing the discussion, community vibe, and key advice for contributing.
+Return a structured JSON analysis summarizing what the post is about, the OP's core intent, and actionable guidance for commenting.
 
 Schema:
 {
-  "summary": "1-2 sentence breakdown of the OP's core question or premise.",
+  "summary": "Crisp 2-sentence breakdown of OP's core problem, proposal, or question.",
   "communityTone": "e.g. Professional, Technical, Casual, Seeking Mentorship",
+  "whatOPIsLookingFor": "Specific breakdown of what OP wants from responders",
   "keyTakeaways": [
     "Key point 1",
     "Key point 2"
@@ -75,11 +93,14 @@ Schema:
 
     const userPrompt = `Subreddit: ${context.subreddit || "r/all"}
 Post Title: ${context.post?.title || "N/A"}
-Post Body: ${context.post?.body || "N/A"}
+Post Body:
+"""
+${context.post?.body || "N/A"}
+"""
 Community Rules:
 ${(context.rules || []).join("\n") || "Standard Reddit Content Policy"}
 
-Provide an insightful, concise analysis of this post.`;
+Provide a comprehensive, high-value summary and analysis of this post.`;
 
     return { systemPrompt, userPrompt };
   },
@@ -92,6 +113,7 @@ Provide an insightful, concise analysis of this post.`;
 
 Schema:
 {
+  "postSummary": "1 sentence recap of OP's post",
   "questions": [
     {
       "title": "Technical Follow-up",
@@ -99,21 +121,24 @@ Schema:
       "why": "Why this question deepens the conversation."
     },
     {
-      "title": "Architecture / Scope Inquiry",
+      "title": "Scope / Collaboration Inquiry",
       "text": "Drafted question...",
       "why": "Why this clarifies critical requirements."
     },
     {
-      "title": "Community Experience Question",
+      "title": "Strategic Perspective Question",
       "text": "Drafted question...",
-      "why": "Why this invites other developers to share solutions."
+      "why": "Why this invites others to share experiences."
     }
   ]
 }`;
 
     const userPrompt = `Subreddit: ${context.subreddit || "r/all"}
 Post Title: ${context.post?.title || "N/A"}
-Post Body: ${context.post?.body || "N/A"}
+Post Body:
+"""
+${context.post?.body || "N/A"}
+"""
 
 Generate 3 high-impact questions to ask the OP.`;
 
