@@ -311,20 +311,26 @@ const UIInjector = {
     if (savePersonaBtn && drawerPersonaInput) {
       savePersonaBtn.addEventListener("click", () => {
         const newPersona = drawerPersonaInput.value.trim();
-        chrome.storage.local.get("settings", (res) => {
-          const settings = res.settings || {};
-          settings.persona = newPersona;
-          chrome.storage.local.set({ settings }, () => {
-            if (personaPreview) {
-              personaPreview.textContent = newPersona ? `"${newPersona.substring(0, 80)}..."` : "Personalized to your background & domain expertise.";
-            }
-            personaEditBox.classList.add("hidden");
-            savePersonaBtn.textContent = "✓ Saved!";
-            setTimeout(() => {
-              savePersonaBtn.textContent = "Save Persona";
-            }, 1500);
-          });
-        });
+        if (typeof chrome !== "undefined" && chrome.runtime?.id && chrome.storage?.local) {
+          try {
+            chrome.storage.local.get("settings", (res) => {
+              if (chrome.runtime.lastError) return;
+              const settings = res?.settings || {};
+              settings.persona = newPersona;
+              chrome.storage.local.set({ settings }, () => {
+                if (chrome.runtime.lastError) return;
+                if (personaPreview) {
+                  personaPreview.textContent = newPersona ? `"${newPersona.substring(0, 80)}..."` : "Personalized to your background & domain expertise.";
+                }
+                personaEditBox.classList.add("hidden");
+                savePersonaBtn.textContent = "✓ Saved!";
+                setTimeout(() => {
+                  savePersonaBtn.textContent = "Save Persona";
+                }, 1500);
+              });
+            });
+          } catch (e) {}
+        }
       });
     }
 
@@ -467,18 +473,25 @@ const UIInjector = {
     this.drawerElement.classList.add("rc-drawer-open");
     this.isDrawerOpen = true;
 
-    // Load active persona into drawer preview
-    chrome.storage.local.get("settings", (res) => {
-      const settings = res.settings || {};
-      const preview = document.getElementById("rc-persona-preview");
-      const drawerInput = document.getElementById("rc-drawer-persona-input");
-      if (settings.persona) {
-        if (preview) preview.textContent = `"${settings.persona.substring(0, 80)}${settings.persona.length > 80 ? '...' : ''}"`;
-        if (drawerInput) drawerInput.value = settings.persona;
-      } else {
-        if (preview) preview.textContent = "No personal bio set. Click 'Edit Persona' to customize.";
+    // Load active persona into drawer preview safely
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id && chrome.storage?.local) {
+      try {
+        chrome.storage.local.get("settings", (res) => {
+          if (chrome.runtime.lastError) return;
+          const settings = res?.settings || {};
+          const preview = document.getElementById("rc-persona-preview");
+          const drawerInput = document.getElementById("rc-drawer-persona-input");
+          if (settings.persona) {
+            if (preview) preview.textContent = `"${settings.persona.substring(0, 80)}${settings.persona.length > 80 ? '...' : ''}"`;
+            if (drawerInput) drawerInput.value = settings.persona;
+          } else {
+            if (preview) preview.textContent = "No personal bio set. Click 'Edit Persona' to customize.";
+          }
+        });
+      } catch (e) {
+        // Context invalidated on un-refreshed tab
       }
-    });
+    }
 
     if (window.ContextExtractor) {
       const sub = window.ContextExtractor.extractSubredditName();
